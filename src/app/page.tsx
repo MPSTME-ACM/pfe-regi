@@ -170,7 +170,7 @@ interface RegistrationFormProps {
     handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
 }
 const RegistrationForm: React.FC<RegistrationFormProps> = ({ formData, handleInputChange }) => {
-  const domains = ['CTPS', 'Python', 'Web Development', 'DSA', 'AI/ML'];
+  const domains = ['CTPS', 'Python', 'Web', 'DSA', 'AIML'];
   const years = ['First Year', 'Second Year', 'Third Year', 'Fourth Year', 'Fifth Year'];
   const courses = ['BTI', 'BTech', 'MBA Tech'];
   const departments = [
@@ -182,7 +182,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ formData, handleInp
     <div>
       <InputField label="Your Name" type="text" placeholder="Enter your full name" name="name" value={formData.name} onChange={handleInputChange} required />
       <InputField label="Your Email" type="email" placeholder="youremail@domain.com" name="email" value={formData.email} onChange={handleInputChange} required />
-      <InputField label="Contact Number" type="tel" placeholder="+91 9876543210" name="contact" value={formData.contact} onChange={handleInputChange} required />
+      <InputField label="Contact Number" type="tel" placeholder="9876543210" name="contact" value={formData.contact} onChange={handleInputChange} required />
       <SelectField label="Course" name="course" options={courses} value={formData.course} onChange={handleInputChange} required />
       <SelectField label="Department" name="department" options={departments} value={formData.department} onChange={handleInputChange} required />
       <SelectField label="Current Academic Year" name="year" options={years} value={formData.year} onChange={handleInputChange} required />
@@ -266,7 +266,7 @@ export default function Home() {
     if (paymentSessionId && cashfree) {
         const checkoutOptions = {
             paymentSessionId: paymentSessionId,
-            redirectTarget: "_self", // Use "_self" to render in the same container
+            redirectTarget: "_modal", // Use "_self" to render in the same container
         };
         cashfree.checkout(checkoutOptions);
         setIsLoading(false); // Stop loading once checkout is rendered

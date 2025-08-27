@@ -10,7 +10,7 @@ import { registrations } from '@/lib/db/schema';
 // CASHFREE_ENV=SANDBOX or PRODUCTION
 // CASHFREE_WEBHOOK_SECRET=YOUR_WEBHOOK_SECRET
 
-const cashfreeEnvironment = process.env.CASHFREE_ENV === 'SANDBOX' 
+const cashfreeEnvironment = process.env.CASHFREE_ENV === 'PRODUCTION' 
     ? CFEnvironment.PRODUCTION 
     : CFEnvironment.SANDBOX;
 
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     console.log('API Route Received FormData:', formData);
 
     // Uses user's contact number and the current timestamp.
-    const orderId = `PFE-${formData.contact}-${Date.now()}`;
+    const orderId = `PFE-${formData.contact}-${formData.domain}`;
 
     await db.insert(registrations).values({
         name: formData.name,
