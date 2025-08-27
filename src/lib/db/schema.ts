@@ -1,6 +1,6 @@
 import { pgTable, serial, text, varchar, timestamp, index } from 'drizzle-orm/pg-core';
 
-export const registrations = pgTable('registrations', {
+export const registrations = pgTable('pferegistration', {
   id: serial('id').primaryKey(),
   name: varchar('name', { length: 256 }).notNull(),
   email: varchar('email', { length: 256 }).notNull(),

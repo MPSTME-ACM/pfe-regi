@@ -8,6 +8,13 @@
       "when": 1756294001129,
       "tag": "0000_neat_the_stranger",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1756323126466,
+      "tag": "0001_aspiring_violations",
+      "breakpoints": true
     }
   ]
 }
