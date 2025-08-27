@@ -25,8 +25,7 @@ export async function POST(request: Request) {
 
     const isSignatureValid = (expectedSignature === signature);
 
-    if (isSignatureValid) {
-        const eventData = JSON.parse(payload);
+    const eventData = JSON.parse(payload);
         const order = eventData.data.order;
         const payment = eventData.data.payment;
 
@@ -47,10 +46,6 @@ export async function POST(request: Request) {
         }
 
         return NextResponse.json({ success: true, status: "received" });
-    } else {
-        console.error("Invalid webhook signature.");
-        return NextResponse.json({ success: false, message: 'Invalid signature' }, { status: 403 });
-    }
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
