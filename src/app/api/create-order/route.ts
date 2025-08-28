@@ -58,7 +58,6 @@ export async function POST(request: Request) {
         // The return_url now correctly points to your local http server
         return_url: `${baseUrl}/payment-status?order_id={order_id}`,
         notify_url: `${baseUrl}/api/webhook`,
-        payment_methods: "upi"
       },
       order_note: `Registration for PFE Workshop - ${formData.domain}`,
     };
