@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     console.log('API Route Received FormData:', formData);
 
     // Uses user's contact number and the current timestamp.
-    const orderId = `PFE-${formData.contact}-${formData.domain}`;
+    const orderId = `PFE-${formData.contact}-${Date.now().toString().slice(-4)}`;
 
     await db.insert(registrations).values({
         name: formData.name,
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
         // The return_url now correctly points to your local http server
         return_url: `${baseUrl}/payment-status?order_id={order_id}`,
         notify_url: `${baseUrl}/api/webhook`,
-        payment_methods: "upi,dc,cc"
+        payment_methods: "upi"
       },
       order_note: `Registration for PFE Workshop - ${formData.domain}`,
     };
