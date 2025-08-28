@@ -1,6 +1,7 @@
-// app/page.tsx
+
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 
 interface CashfreeSDK {
     checkout(options: { paymentSessionId: string; redirectTarget: string; }): void;
@@ -329,8 +330,23 @@ export default function Home() {
                 ) : (
                     <div id="cf_checkout" className="w-full"></div>
                 )}
+
+                <div className="mt-8 text-center text-sm text-gray-500">
+            <p>By registering, you agree to our policies.</p>
+            <div className="flex justify-center gap-x-4 mt-2">
+                <Link href="/terms-of-service" className="hover:text-[#f8c8fc] transition-colors">
+                    Terms of Service
+                </Link>
+                <span>&bull;</span>
+                <Link href="/cancellation-policy" className="hover:text-[#f8c8fc] transition-colors">
+                    Cancellation Policy
+                </Link>
             </div>
         </div>
+            </div>
+        </div>
+
+        
       </main>
     </>
   );
