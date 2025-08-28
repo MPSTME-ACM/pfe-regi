@@ -49,7 +49,7 @@ const ParticleBackground = () => {
         const text = characters.charAt(Math.floor(Math.random() * characters.length));
         ctx.fillText(text, i * fontSize, drops[i] * fontSize);
 
-        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+        if (drops[i] * fontSize > canvas.height && Math.random() > 0.995) {
           drops[i] = 0;
         }
 
@@ -78,11 +78,11 @@ const ParticleBackground = () => {
 const Header = () => {
   return (
     <header className="text-center mb-10">
-      <h1 className="text-5xl font-extrabold text-white mb-2">
-        PFE - Programming For Everyone
+      <h1 className="text-4xl font-extrabold text-white mb-2">
+        Programming For Everyone
       </h1>
       <p className="text-xl text-gray-300">
-        A 3-day workshop by <span className="font-semibold text-[#f8c8fc]">ACM MPSTME</span>
+        A 3-day workshop by <span className="font-semibold text-[#d358f2]">ACM MPSTME</span>
       </p>
       <p className="text-md text-gray-500 mt-2">
         September 16th - 18th, 2025
@@ -170,7 +170,7 @@ interface RegistrationFormProps {
     handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
 }
 const RegistrationForm: React.FC<RegistrationFormProps> = ({ formData, handleInputChange }) => {
-  const domains = ['CTPS', 'Python', 'Web', 'DSA', 'AIML'];
+  const domains = ['C', 'Python', 'Web', 'DSA', 'AIML'];
   const years = ['First Year', 'Second Year', 'Third Year', 'Fourth Year', 'Fifth Year'];
   const courses = ['BTI', 'BTech', 'MBA Tech'];
   const departments = [
@@ -315,7 +315,7 @@ export default function Home() {
                         <div className="mt-10 text-center">
                             <div className="mb-6">
                                 <p className="text-2xl font-bold text-white">Ticket Price: ₹99</p>
-                                <p className="text-sm text-gray-500">Payment link will be sent to your registered email.</p>
+                                <p className="text-sm text-gray-500">You will be redirected to gateway for payment.</p>
                             </div>
                           <button
                             type="submit"
