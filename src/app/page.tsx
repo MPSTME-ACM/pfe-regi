@@ -12,7 +12,6 @@ const ParticleBackground = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    // No console logs needed in this final version, but you can keep them for testing.
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -26,9 +25,22 @@ const ParticleBackground = () => {
     let drops: { y: number; char: string }[];
     let content: { text: string; y: number }[];
 
-    // Forward-declare draw so initialize can call it.
-    // The actual function body is defined below.
-    let draw: () => void; 
+    const draw = () => {
+      if (!ctx || !canvas || !drops) return;
+
+      ctx.fillStyle = 'rgba(13, 13, 26, 0.1)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      ctx.fillStyle = '#e97bfc';
+      ctx.font = `${fontSize}px monospace`;
+
+      for (let i = 0; i < columns; i++) {
+        const drop = drops[i];
+        if(drop) {
+          ctx.fillText(drop.char, i * fontSize, drop.y * fontSize);
+        }
+      }
+    };
 
     const initialize = () => {
       canvas.width = window.innerWidth;
@@ -47,12 +59,7 @@ const ParticleBackground = () => {
         { text: 'CODING WEBDEV DSA AIML', y: canvas.height * 0.7 },
       ];
       
-      // --- THE FINAL FIX ---
-      // Force an immediate repaint right after re-initializing.
-      // This prevents the browser from ever rendering the blank, wiped canvas.
-      if (draw) {
-        draw();
-      }
+      draw();
     };
 
     let resizeTimeout: NodeJS.Timeout;
@@ -61,22 +68,6 @@ const ParticleBackground = () => {
       resizeTimeout = setTimeout(() => {
         initialize();
       }, 250);
-    };
-
-    // Assign the draw function body
-    draw = () => {
-      ctx.fillStyle = 'rgba(13, 13, 26, 0.1)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      ctx.fillStyle = '#e97bfc';
-      ctx.font = `${fontSize}px monospace`;
-
-      for (let i = 0; i < columns; i++) {
-        const drop = drops[i];
-        if(drop) {
-          ctx.fillText(drop.char, i * fontSize, drop.y * fontSize);
-        }
-      }
     };
 
     let frameCount = 0;
@@ -124,7 +115,7 @@ const ParticleBackground = () => {
     };
 
     window.addEventListener('resize', handleResize);
-    initialize(); // Initial setup
+    initialize();
     animate();
 
     return () => {
