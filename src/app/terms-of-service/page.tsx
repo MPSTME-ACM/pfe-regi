@@ -1,3 +1,4 @@
+import Link from "next/link";
 export default function TermsOfServicePage() {
     return (
         <div className="min-h-screen bg-[#0d0d1a] text-white font-sans p-8 sm:p-12 md:p-16">
@@ -19,10 +20,9 @@ export default function TermsOfServicePage() {
                     <p>ACM MPSTME is not responsible for any loss, injury, or damage to personal property. By attending, you agree to release ACM MPSTME from any and all claims and liabilities.</p>
                 </div>
                 <div className="mt-12">
-                    {/* FIX: Replaced <Link> with a standard <a> tag. */}
-                    <a href="/" className="text-[#7bbeeb] hover:text-[#e97bfc] transition-colors">
+                    <Link href="/" className="text-[#7bbeeb] hover:text-[#e97bfc] transition-colors">
                         &larr; Back to Registration
-                    </a>
+                    </Link>
                 </div>
             </div>
         </div>
