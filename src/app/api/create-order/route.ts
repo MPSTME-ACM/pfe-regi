@@ -44,7 +44,7 @@ export async function POST(request: Request) {
 
     const cashfreeRequest = {
       order_id: orderId,
-      order_amount: 99.00,
+      order_amount: 100.00,
       order_currency: "INR",
       customer_details: {
         customer_id: `customer_${formData.contact}`,
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
       },
       order_meta: {
         // The return_url now correctly points to your local http server
-        return_url: `${baseUrl}/payment-status?order_id={order_id}`,
+        return_url: `${baseUrl}/payment-status?order_id=${orderId}`,
         notify_url: `${baseUrl}/api/webhook`,
       },
       order_note: `Registration for PFE Workshop - ${formData.domain}`,
