@@ -6,14 +6,14 @@ export default function ContactUsPage() {
                 <h1 className="text-4xl font-extrabold text-[#e97bfc] mb-8">Contact Us</h1>
                 <div className="space-y-8 text-gray-300 bg-black/30 p-8 rounded-lg border border-white/10">
                     <p>
-                        Have questions about the PFE Workshop or need assistance? We're here to help! Reach out to us through any of the channels below.
+                        Have questions about the PFE Workshop or need assistance? We&apos;re here to help! Reach out to us through any of the channels below.
                     </p>
                     
                     <div>
                         <h2 className="text-2xl font-bold text-[#f8c8fc]">Email Support</h2>
                         <p>For general inquiries, please email us at:</p>
                         <Link href="mailto:[YOUR_EMAIL_HERE]" className="text-[#7bbeeb] hover:text-[#e97bfc] transition-colors text-lg">
-                            mail@parthg.me
+                            pfe@mpst.me
                         </Link>
                     </div>
 
