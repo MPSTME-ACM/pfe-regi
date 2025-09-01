@@ -4,8 +4,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { json } from 'stream/consumers';
 
+interface CheckoutResult {
+  error?: { message: string; code: string; };
+  redirect?: boolean;
+  paymentDetails?: { paymentMessage: string; };
+}
+
 interface CashfreeSDK {
-  checkout(options: { paymentSessionId: string; redirectTarget: string; }): any;
+  checkout(options: { paymentSessionId: string; redirectTarget: string; }): Promise<CheckoutResult>;
 }
 
 // Component: ParticleBackground
@@ -331,7 +337,7 @@ export default function Home() {
         paymentSessionId: paymentSessionId,
         redirectTarget: "_modal", // Use "_self" to render in the same container
       };
-      cashfree.checkout(checkoutOptions).then((result: any) => {
+      cashfree.checkout(checkoutOptions).then((result: CheckoutResult) => {
         console.log(JSON.stringify(result));
             if(result.error){
                 // This will be true whenever user clicks on close icon inside the modal or any error happens during the payment
