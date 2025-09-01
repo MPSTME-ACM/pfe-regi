@@ -12,7 +12,7 @@ export default function ContactUsPage() {
                     <div>
                         <h2 className="text-2xl font-bold text-[#f8c8fc]">Email Support</h2>
                         <p>For general inquiries, please email us at:</p>
-                        <Link href="mailto:[YOUR_EMAIL_HERE]" className="text-[#7bbeeb] hover:text-[#e97bfc] transition-colors text-lg">
+                        <Link href="mailto:pfe@mpst.me" className="text-[#7bbeeb] hover:text-[#e97bfc] transition-colors text-lg">
                             pfe@mpst.me
                         </Link>
                     </div>
@@ -20,7 +20,7 @@ export default function ContactUsPage() {
                     <div>
                         <h2 className="text-2xl font-bold text-[#f8c8fc]">Phone Support</h2>
                         <p>For urgent matters, you can contact us at:</p>
-                        <Link href="tel:[YOUR_PHONE_NUMBER_HERE]" className="text-[#7bbeeb] hover:text-[#e97bfc] transition-colors text-lg">
+                        <Link href="tel:+919619458059" className="text-[#7bbeeb] hover:text-[#e97bfc] transition-colors text-lg">
                             +91 9619458059
                         </Link>
                     </div>
