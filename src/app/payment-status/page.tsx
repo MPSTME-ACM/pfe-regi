@@ -68,7 +68,7 @@ const StatusDisplay = () => {
                         <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-yellow-400 mx-auto mb-6"></div>
                         <h1 className="text-5xl font-bold text-yellow-400 mb-4">Payment Pending</h1>
                         <p className="text-xl text-gray-200">Your payment is being processed. This can take a few moments.</p>
-                        <p className="text-md text-gray-400 mt-2">We will send a confirmation email once it's successful.</p>
+                        <p className="text-md text-gray-400 mt-2">We will send a confirmation email once it&apos;s successful.</p>
                     </>
                 );
             case 'Failure':
