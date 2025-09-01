@@ -30,7 +30,7 @@ export async function POST(request: Request) {
         const payment = eventData.data.payment;
 
         console.log(`Webhook received for order: ${order.order_id}, Status: ${payment.payment_status}`);
-        console.debug(request.formData + "webhook route");
+        console.debug(eventData + "webhook route");
 
         // --- DATABASE INTEGRATION ---
         // Update the payment status in the database based on the webhook event

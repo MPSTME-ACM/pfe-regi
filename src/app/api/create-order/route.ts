@@ -44,7 +44,7 @@ export async function POST(request: Request) {
 
     const cashfreeRequest = {
       order_id: orderId,
-      order_amount: 100.00,
+      order_amount: 10.00,
       order_currency: "INR",
       customer_details: {
         customer_id: `customer_${formData.contact}`,
@@ -54,13 +54,17 @@ export async function POST(request: Request) {
       },
       order_meta: {
         // The return_url now correctly points to your local http server
-        return_url: `${baseUrl}/payment-status?order_id=${orderId}`,
+        return_url: `${baseUrl}/payment-status?order_id={order_id}`,
         notify_url: `${baseUrl}/api/webhook`,
       },
       order_note: `Registration for PFE Workshop - ${formData.domain}`,
     };
 
+    console.log(`${baseUrl}/payment-status?order_id=` + cashfreeRequest.order_id);
+    console.log(`${baseUrl}/api/webhook`);
+
     const order = await cashfree.PGCreateOrder(cashfreeRequest);
+    console.log(order + "complete order from create-order");
     const paymentSessionId = order.data.payment_session_id;
 
     return NextResponse.json({ 
