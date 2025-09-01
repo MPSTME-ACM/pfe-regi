@@ -18,6 +18,9 @@ export default function TermsOfServicePage() {
 
                     <h2 className="text-2xl font-bold text-[#f8c8fc] pt-4">4. Liability</h2>
                     <p>ACM MPSTME is not responsible for any loss, injury, or damage to personal property. By attending, you agree to release ACM MPSTME from any and all claims and liabilities.</p>
+
+                    <h2 className="text-2xl font-bold text-[#f8c8fc] pt-4">5. Shipping and Delivery</h2>
+                    <p>The PFE Workshop will be conducted <strong>offline</strong> at the <strong>Mukesh Patel School of Technology Management & Engineering, Mumbai campus</strong> on the <strong>16<sup>th</sup>, 17<sup>th</sup>, and 18<sup>th</sup> of September 2025</strong>. As this is an in-person event, there are <strong>no physical products</strong> being shipped. The exact classroom venue and event logistics will be communicated through a dedicated WhatsApp group, which will be created by <strong>13<sup>th</sup> September 2025</strong>. There are no shipping or delivery charges applicable.</p>
                 </div>
                 <div className="mt-12">
                     <Link href="/" className="text-[#7bbeeb] hover:text-[#e97bfc] transition-colors">
