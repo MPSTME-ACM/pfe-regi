@@ -275,7 +275,7 @@ export default function Home() {
       // Dynamically import the package only on the client-side
       const { load } = await import("@cashfreepayments/cashfree-js");
       const cf = await load({
-        mode: process.env.CASHFREE_ENV?.toLowerCase() || "sandbox"
+        mode: "production" //use sandobox for dev
       });
       setCashfree(cf);
     };
