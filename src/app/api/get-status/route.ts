@@ -16,13 +16,12 @@ const cashfree = new Cashfree(
 export async function POST(request: Request) {
   try {
     const { order_id } = await request.json();
+    console.log(order_id + " get-status req");
 
     if (!order_id) {
       return NextResponse.json({ success: false, message: 'Order ID is required' }, { status: 400 });
     }
 
-    // This call was failing with a 401 error due to incorrect credentials.
-    // It will now succeed with the corrected initialization above.
     const payments = await cashfree.PGOrderFetchPayments(order_id);
     const paymentData = payments.data;
 
@@ -32,10 +31,12 @@ export async function POST(request: Request) {
         const successTx = paymentData.find(tx => tx.payment_status === "SUCCESS");
         if (successTx) {
             orderStatus = "Success";
+            console.log("payment success get-status");
         } else {
             const pendingTx = paymentData.find(tx => tx.payment_status === "PENDING");
             if (pendingTx) {
                 orderStatus = "Pending";
+                console.log("payment pending get-status");
             }
         }
     }

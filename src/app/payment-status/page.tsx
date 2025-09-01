@@ -9,7 +9,7 @@ const StatusDisplay = () => {
     const [order_id, setOrderId] = useState<string | null>(null);
     const [status, setStatus] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
-
+    
     // This effect runs once on the client-side to get the order_id from the URL
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -55,6 +55,7 @@ const StatusDisplay = () => {
         }
         switch (status) {
             case 'Success':
+                console.debug("success payment-status")
                 return (
                     <>
                         <h1 className="text-5xl font-bold text-green-400 mb-4">Payment Successful!</h1>
@@ -62,6 +63,7 @@ const StatusDisplay = () => {
                     </>
                 );
             case 'Pending':
+                console.debug("pending payment-status")
                 return (
                     <>
                         {/* New Loading Spinner */}
@@ -82,6 +84,7 @@ const StatusDisplay = () => {
         }
     };
 
+    console.debug("payment-status check");
     return (
         <div className="min-h-screen bg-[#0d0d1a] text-white flex flex-col items-center justify-center text-center p-4">
             {renderStatus()}
@@ -94,6 +97,7 @@ const StatusDisplay = () => {
 
 // The Suspense wrapper is kept for good practice with client-side data fetching.
 export default function PaymentStatusPage() {
+    console.debug("payment-status check");
     return (
         <Suspense fallback={<div className="min-h-screen bg-[#0d0d1a] text-white flex items-center justify-center">Loading...</div>}>
             <StatusDisplay />
