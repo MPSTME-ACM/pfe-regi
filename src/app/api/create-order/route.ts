@@ -40,9 +40,7 @@ export async function POST(request: Request) {
         paymentStatus: 'pending',
     });
 
-    const baseUrl = process.env.NODE_ENV === 'production' 
-        ? process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000' // Fallback to a placeholder
-        : 'http://localhost:3000'; // FIX: Use http for local development
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
     const cashfreeRequest = {
       order_id: orderId,
