@@ -419,6 +419,10 @@ export default function Home() {
                 <Link href="/about-us" className="hover:text-[#f8c8fc] transition-colors">
                   About Us
                 </Link>
+                <span>&bull;</span>
+                <Link href="/contact-us" className="hover:text-[#f8c8fc] transition-colors">
+                  Contact Us
+                </Link>
               </div>
             </div>
           </div>
