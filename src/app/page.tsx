@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { json } from 'stream/consumers';
+import { redirect } from 'next/dist/server/api-utils';
+import { useRouter } from 'next/navigation';
 
 interface CheckoutResult {
   error?: { message: string; code: string; };
@@ -265,9 +267,11 @@ export default function Home() {
     year: '',
     domain: '',
   });
+  const router = useRouter();
   const [progress, setProgress] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [cashfree, setCashfree] = useState<CashfreeSDK | null>(null);
+  const [orderId, setOrderId] = useState<string | null>(null);
   const [paymentSessionId, setPaymentSessionId] = useState<string | null>(null);
   const [merchantName, setMerchantName] = useState('');
   const [merchantEmail, setMerchantEmail] = useState('');
@@ -320,6 +324,7 @@ export default function Home() {
 
       if (data.success && data.payment_session_id) {
         setPaymentSessionId(data.payment_session_id);
+        setOrderId(data.order_id); 
         // The checkout will be rendered in a useEffect hook when paymentSessionId is set
       } else {
         console.error('Failed to create order:', data.message);
@@ -355,6 +360,17 @@ export default function Home() {
                 console.log("Payment has been completed, Check for Payment Status");
                 console.log(result.paymentDetails.paymentMessage);
             }
+            if (result.paymentDetails || result.error) {
+            // If the process is finished (success, fail, or closed), redirect to the status page.
+            // Our /api/get-status route will determine the final outcome.
+            if (orderId) {
+                router.push(`/payment-status?order_id=${orderId}`);
+            } else {
+                // Fallback if something went wrong and we don't have the orderId
+                console.error("Order ID not available for redirect.");
+                setIsLoading(false);
+            }
+        }
         });
       setIsLoading(false); // Stop loading once checkout is rendered
     }

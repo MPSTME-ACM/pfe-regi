@@ -53,23 +53,18 @@ export async function POST(request: Request) {
         customer_phone: formData.contact,
       },
       order_meta: {
-        // The return_url now correctly points to your local http server
-        return_url: `${baseUrl}/payment-status?order_id={order_id}`,
         notify_url: `${baseUrl}/api/webhook`,
       },
       order_note: `Registration for PFE Workshop - ${formData.domain}`,
     };
 
-    console.log(`${baseUrl}/payment-status?order_id=` + cashfreeRequest.order_id);
-    console.log(`${baseUrl}/api/webhook`);
-
     const order = await cashfree.PGCreateOrder(cashfreeRequest);
-    console.log(order + "complete order from create-order");
     const paymentSessionId = order.data.payment_session_id;
 
     return NextResponse.json({ 
         success: true, 
-        payment_session_id: paymentSessionId 
+        payment_session_id: paymentSessionId,
+        order_id: orderId 
     });
 
   } catch (error) {
