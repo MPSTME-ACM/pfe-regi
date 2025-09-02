@@ -1,0 +1,1 @@
+ALTER TABLE "pferegistration" ADD COLUMN "attendance" jsonb DEFAULT '[false,false,false]'::jsonb NOT NULL;

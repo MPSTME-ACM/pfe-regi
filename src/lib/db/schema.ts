@@ -1,4 +1,4 @@
-import { pgTable, serial, text, varchar, timestamp, index } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, varchar, timestamp, index, jsonb } from 'drizzle-orm/pg-core';
 
 export const registrations = pgTable('pferegistration', {
   id: serial('id').primaryKey(),
@@ -13,7 +13,7 @@ export const registrations = pgTable('pferegistration', {
   paymentStatus: text('payment_status', { enum: ['pending', 'success', 'failure'] }).default('pending'),
   qrCodeUrl: text('qr_code_url'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-  
+  attendance: jsonb('attendance').$type<boolean[]>().default([false, false, false]).notNull()
 },
 (table) => ({
   emailIdx: index('email_idx').on(table.email)

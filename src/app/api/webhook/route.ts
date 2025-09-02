@@ -31,14 +31,11 @@ export async function POST(request: Request) {
     const order = eventData.data.order;
     const payment = eventData.data.payment;
 
-    // console.log(`Webhook received for order: ${order.order_id}, Status: ${payment.payment_status}`);
-    console.debug(eventData + "webhook route");
-
     // --- DATABASE INTEGRATION ---
     // Update the payment status in the database based on the webhook event
     if (payment.payment_status === "SUCCESS") {
       // Generate QR code
-      const qrCodeDataUrl = await qrcode.toDataURL(`https://your-event-site.com/verify?orderId=${order.order_id}`);
+      const qrCodeDataUrl = await qrcode.toDataURL(`${process.env.NEXT_PUBLIC_SITE_URL}/verify?orderId=${order.order_id}`);
 
       // Update database
       const updateResult = await db.update(registrations)

@@ -1,22 +1,31 @@
 "use client";
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useEffect, useState, Suspense, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { toJpeg } from 'html-to-image';
 
 // Define a type for the registration details we expect from the API
 interface RegistrationDetails {
+    id: number;
     name: string;
+    email: string;
+    contact: string;
+    course: string;
+    department: string;
+    year: string;
     domain: string;
     orderId: string;
+    paymentStatus: string | null;
+    createdAt: Date | null;
     qrCodeUrl: string | null;
-    year: string;
-    course: string;
 }
 
 const StatusDisplay = () => {
     const [status, setStatus] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [details, setDetails] = useState<RegistrationDetails | null>(null);
+    const ticketRef = useRef<HTMLDivElement>(null);
+
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -70,13 +79,13 @@ const StatusDisplay = () => {
                 return (
                     <div className="w-full max-w-sm sm:max-w-md animate-fade-in">
                         <div className="text-center mb-8">
-                             <h1 className="text-3xl sm:text-4xl font-bold text-white">Payment Successful!</h1>
-                             <p className="text-gray-400 mt-2">Your Event Pass is ready.</p>
+                            <h1 className="text-3xl sm:text-4xl font-bold text-white">Payment Successful!</h1>
+                            <p className="text-gray-400 mt-2">Your Event Pass is ready.</p>
                         </div>
 
                         {/* Ticket Layout */}
-                        <div className="relative bg-black/50 backdrop-blur-md rounded-2xl border border-pink-500/30 shadow-2xl shadow-pink-500/20 p-1 progress-glow-container">
-                             {/* Ticket Cutouts */}
+                        <div ref={ticketRef} className="relative bg-black/50 backdrop-blur-md rounded-2xl border border-pink-500/30 shadow-2xl shadow-pink-500/20 p-1 progress-glow-container">
+                            {/* Ticket Cutouts */}
                             <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-[#0d0d1a] rounded-full"></div>
                             <div className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-[#0d0d1a] rounded-full"></div>
 
@@ -85,12 +94,12 @@ const StatusDisplay = () => {
                                     {/* QR Code Section */}
                                     <div className="flex-shrink-0">
                                         {details.qrCodeUrl && (
-                                            <Image 
-                                                src={details.qrCodeUrl} 
-                                                alt="Registration QR Code" 
-                                                width={128} 
-                                                height={128} 
-                                                className="bg-white p-1 rounded-lg w-32 h-32" 
+                                            <Image
+                                                src={details.qrCodeUrl}
+                                                alt="Registration QR Code"
+                                                width={180}
+                                                height={180}
+                                                className="bg-white p-1 rounded-lg w-32 h-32"
                                             />
                                         )}
                                     </div>
@@ -105,12 +114,20 @@ const StatusDisplay = () => {
                                 </div>
                             </div>
                         </div>
-                         <p className="text-xs text-gray-500 mt-6 text-center">A confirmation email with your ticket has been sent to your registered email address.</p>
+
+                        <button
+                            onClick={handleDownload}
+                            className="mt-8 bg-[#e97bfc] text-black font-bold py-3 px-6 rounded-lg text-lg transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-2xl hover:shadow-[#e97bfc]/50 active:scale-95"
+                        >
+                            Download Ticket 📎
+                        </button>
+
+                        <p className="text-xs text-gray-500 mt-6 text-center">A confirmation email with your ticket will be sent to your registered email address.</p>
 
                     </div>
                 );
             case 'Pending':
-                 return (
+                return (
                     <div className="w-full max-w-md text-center">
                         <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-yellow-400 mx-auto mb-6"></div>
                         <h1 className="text-4xl font-bold text-yellow-400 mb-4">Payment Pending</h1>
@@ -120,18 +137,42 @@ const StatusDisplay = () => {
                 );
             case 'Failure':
             default:
-                 return (
+                return (
                     <div className="w-full max-w-md text-center">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto mb-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                         </svg>
                         <h1 className="text-4xl font-bold text-red-500 mb-4">Payment Failed</h1>
                         <p className="text-lg text-gray-300">Unfortunately, your payment could not be processed.</p>
-                         <Link href="/" className="mt-8 inline-block bg-gray-700 text-white font-bold py-3 px-6 rounded-lg text-lg hover:bg-gray-600 transition-colors duration-300">
+                        <Link href="/" className="mt-8 inline-block bg-gray-700 text-white font-bold py-3 px-6 rounded-lg text-lg hover:bg-gray-600 transition-colors duration-300">
                             Try Again
                         </Link>
                     </div>
                 );
+        }
+    };
+
+    const handleDownload = () => {
+        if (ticketRef.current && details) {
+            toJpeg(ticketRef.current, {
+                cacheBust: true,
+                // Ensure the background isn't transparent in the downloaded image
+                backgroundColor: '#0d0d1a',
+                quality: 0.95
+            })
+                .then((dataUrl) => {
+                    const link = document.createElement('a');
+                    // Sanitize the name and create the filename
+                    const fileName = `${details.name.replace(/\s+/g, '_')}-PFE-Ticket.jpeg`;
+                    link.download = fileName;
+                    link.href = dataUrl;
+                    link.click(); // Trigger the download
+                })
+                .catch((err) => {
+                    console.error('Failed to generate ticket image:', err);
+                    // Use a custom modal in a real app, but alert is fine for now
+                    alert('Oops! Could not download the ticket. Please try taking a screenshot.');
+                });
         }
     };
 
