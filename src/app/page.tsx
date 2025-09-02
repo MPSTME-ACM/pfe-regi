@@ -488,7 +488,7 @@ export default function Home() {
   useEffect(() => {
     const fetchDomainCounts = async () => {
       try {
-        const response = await fetch('/api/domain-counts');
+        const response = await fetch('/api/domain-count');
         const data = await response.json();
         if (data.success) {
           setDomainCounts(data.counts);

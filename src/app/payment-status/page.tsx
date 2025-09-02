@@ -124,7 +124,7 @@ const StatusDisplay = () => {
                             </button>
                         </div>
 
-                        <p className="text-s text-gray-500 mt-6 text-center">A confirmation email with your ticket will be sent to your registered email address.</p>
+                        <p className="text-s text-gray-500 mt-6 text-center">A confirmation email with your ticket will be sent to your registered email address, also keep an eye on the spam folder.</p>
 
                     </div>
                 );
