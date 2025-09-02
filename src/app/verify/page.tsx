@@ -77,11 +77,17 @@ const QrScanner = ({ onScanSuccess, onScanError, onStop }: { onScanSuccess: Qrco
 
     return (
         <div className="w-full max-w-md p-6 bg-black/50 backdrop-blur-md rounded-2xl border border-white/10 shadow-2xl shadow-[#e97bfc]/10">
-            <div id="reader" className="w-full bg-black rounded-lg overflow-hidden border border-white/10"></div>
-            <button onClick={onStop} className="w-full mt-4 text-center text-red-500 font-bold py-3 px-8 rounded-lg border-2 border-red-500 transition-all duration-300 ease-in-out transform hover:bg-red-500/10 active:scale-95">
+        <h3 className="text-lg font-semibold text-white mb-4 text-center">Scan QR Code</h3>
+        <div id="reader" className="w-full bg-white/5 rounded-lg overflow-hidden border border-white/20"></div>
+        <div className="w-full text-center">
+            <button 
+                onClick={onStop} 
+                className="mt-6 text-center text-red-500 font-bold py-2 px-6 rounded-lg border-2 border-red-500 transition-all duration-300 ease-in-out transform hover:bg-red-500/10 hover:shadow-lg hover:shadow-red-500/20 active:scale-95"
+            >
                 Close Scanner
             </button>
         </div>
+    </div>
     );
 };
 
@@ -155,7 +161,7 @@ const VerificationDisplay = ({ orderId, authCreds }: { orderId: string, authCred
             <div>
                 <h2 className="text-xl font-bold mb-4">Mark Attendance</h2>
                 <div className="flex justify-around">
-                    {[...Array(4)].map((_, index) => (
+                    {[...Array(3)].map((_, index) => (
                         <div key={index} className="flex flex-col items-center gap-2">
                             <label htmlFor={`day-${index}`} className="text-gray-300">Day {index + 1}</label>
                             <input
@@ -232,8 +238,11 @@ const VerifyPageContent = () => {
     }
     
     return (
+        
+        
+
         <div className="relative w-full max-w-md flex flex-col items-center">
-             <button onClick={handleLogout} className="absolute -top-6 right-0 text-sm text-gray-400 hover:text-white transition-colors">Logout</button>
+             <button onClick={handleLogout} className="fixed top-4 right-4 z-50 text-sm text-gray-400 hover:text-white transition-colors bg-black/30 px-3 py-2 rounded-lg backdrop-blur-sm border border-white/10">Logout</button>
             
             {isScanning ? (
                  <QrScanner onScanSuccess={onScanSuccess} onScanError={onScanError} onStop={() => setIsScanning(false)} />
@@ -247,7 +256,7 @@ const VerifyPageContent = () => {
             )}
 
             {!isScanning && (
-                <button onClick={() => setIsScanning(true)} className="w-auto mx-auto mt-8 text-center text-lg text-[#e97bfc] font-bold transition-all duration-300 transform hover:scale-110 hover:text-[#f8c8fc] hover:drop-shadow-[0_0_10px_#e97bfc]">
+                <button onClick={() => setIsScanning(true)} className="mt-8 text-center text-[#e97bfc] font-bold py-3 px-8 rounded-lg border-2 border-[#e97bfc] transition-all duration-300 ease-in-out transform hover:bg-[#e97bfc]/10 hover:shadow-lg hover:shadow-[#e97bfc]/20 active:scale-95">
                     Scan Next Ticket
                 </button>
             )}

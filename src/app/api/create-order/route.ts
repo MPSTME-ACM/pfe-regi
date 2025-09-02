@@ -26,7 +26,10 @@ export async function POST(request: Request) {
     // console.log('API Route Received FormData:', formData);
 
     // Uses user's contact number and the current timestamp.
-    const orderId = `${formData.name.slice(0, 2).toUpperCase()}${formData.contact.slice(-4)}${formData.domain.charAt(0).toUpperCase()}`;
+    const now = new Date();
+const currentDate = now.getDate().toString().padStart(2, '0');
+const currentHour = now.getHours().toString().padStart(2, '0');
+    const orderId = `${formData.name.slice(0, 2).toUpperCase()}${formData.contact.slice(-4)}${currentDate}${currentHour}${formData.domain.charAt(0).toUpperCase()}`;
 
     await db.insert(registrations).values({
         name: formData.name,
@@ -44,7 +47,7 @@ export async function POST(request: Request) {
 
     const cashfreeRequest = {
       order_id: orderId,
-      order_amount: 10.00,
+      order_amount: parseFloat(process.env.ORDER_AMOUNT!),
       order_currency: "INR",
       customer_details: {
         customer_id: `customer_${formData.contact}`,

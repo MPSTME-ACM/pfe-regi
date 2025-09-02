@@ -77,7 +77,7 @@ const StatusDisplay = () => {
             case 'Success':
                 if (!details) return null;
                 return (
-                    <div className="w-full max-w-sm sm:max-w-md animate-fade-in">
+                    <div className="w-full max-w-md sm:max-w-lg animate-fade-in">
                         <div className="text-center mb-8">
                             <h1 className="text-3xl sm:text-4xl font-bold text-white">Payment Successful!</h1>
                             <p className="text-gray-400 mt-2">Your Event Pass is ready.</p>
@@ -99,14 +99,14 @@ const StatusDisplay = () => {
                                                 alt="Registration QR Code"
                                                 width={256}
                                                 height={256}
-                                                className="bg-white p-1 rounded-lg w-36 h-36"
+                                                className="bg-white p-1 rounded-lg w-44 h-44"
                                             />
                                         )}
                                     </div>
                                     {/* Details Section */}
                                     <div className="text-center sm:text-left border-t sm:border-t-0 sm:border-l border-dashed border-gray-600 pt-6 sm:pt-0 sm:pl-8 flex-grow">
                                         <h2 className="text-2xl font-bold text-white leading-tight">{details.name}</h2>
-                                        <p className="text-lg text-pink-400 mt-1">{details.domain}</p>
+                                        <p className="text-lg text-pink-400 mt-1">Domain: {details.domain}</p>
                                         <p className="text-sm text-gray-400 mt-3">{details.course} &bull; {details.year}</p>
                                         <p className="text-xs text-gray-500 tracking-wider font-mono mt-4 uppercase">Booking ID</p>
                                         <p className="text-xs text-gray-300 tracking-wider font-mono">{details.orderId}</p>
@@ -124,7 +124,7 @@ const StatusDisplay = () => {
                             </button>
                         </div>
 
-                        <p className="text-xs text-gray-500 mt-6 text-center">A confirmation email with your ticket will be sent to your registered email address.</p>
+                        <p className="text-s text-gray-500 mt-6 text-center">A confirmation email with your ticket will be sent to your registered email address.</p>
 
                     </div>
                 );
@@ -160,7 +160,14 @@ const StatusDisplay = () => {
                 cacheBust: true,
                 // Ensure the background isn't transparent in the downloaded image
                 backgroundColor: '#0d0d1a',
-                quality: 0.95
+                quality: 1.0,
+                pixelRatio: 3,
+                width: ticketRef.current.offsetWidth * 2,
+                height: ticketRef.current.offsetHeight * 2,
+                style: {
+                    transform: 'scale(2)',
+                    transformOrigin: 'top left',
+                }
             })
                 .then((dataUrl) => {
                     const link = document.createElement('a');
