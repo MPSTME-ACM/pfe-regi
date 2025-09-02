@@ -333,7 +333,7 @@ export default function Home() {
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const contactRegex = /^[6-9]\d{9}$/;
-        let errors = { email: '', contact: '' };
+        const errors = { email: '', contact: '' };
         let isValid = true;
 
         if (!emailRegex.test(formData.email)) {
@@ -469,8 +469,8 @@ export default function Home() {
             transition: background 0.8s cubic-bezier(0.25, 1, 0.5, 1);
         }
       `}</style>
-      <main className="min-h-screen text-white font-sans flex items-center justify-center p-4 sm:p-6 md:p-8 bg-transparent">
-        <ParticleBackground />
+      <main className="min-h-screen text-white font-sans flex items-center justify-center p-4 sm:p-6 md:p-8">
+        {/* <ParticleBackground /> */}
         <div className="w-full max-w-3xl bg-black/50 backdrop-blur-md rounded-2xl border border-white/10 progress-glow-container">
           <div className="p-8 sm:p-10 md:p-12">
             <Header />

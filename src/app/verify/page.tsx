@@ -66,7 +66,7 @@ const QrScanner = ({ onScanSuccess, onScanError, onStop }: { onScanSuccess: (dec
                 false
             );
             scanner.render(onScanSuccess, onScanError);
-        }).catch(err => {
+        }).catch((err: unknown) => {
             console.error("Failed to load Html5QrcodeScanner", err);
         });
 
@@ -113,7 +113,7 @@ const VerificationDisplay = ({ orderId, authCreds }: { orderId: string, authCred
                     setDetails(data.details);
                     setAttendance(data.details.attendance);
                 } else { setError(data.message); }
-            } catch (err) {
+            } catch (err: unknown) {
                 setError(err instanceof Error ? err.message : 'An unknown error occurred.');
             } finally {
                 setLoading(false);
@@ -216,7 +216,7 @@ const VerifyPageContent = () => {
             } else {
                 throw new Error("No orderId found in QR code.");
             }
-        } catch (err) {
+        } catch (err: unknown) {
             console.error("QR Scan Error:", err);
             alert("Invalid QR Code. Please scan a valid PFE Ticket.");
         }
