@@ -5,6 +5,7 @@ import { db } from '@/lib/db';
 import { registrations } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import qrcode from 'qrcode';
+import QRCodeWithLogos from 'qrcode-with-logos';
 
 export async function POST(request: Request) {
   try {
@@ -36,6 +37,19 @@ export async function POST(request: Request) {
     // --- DATABASE INTEGRATION ---
     // Update the payment status in the database based on the webhook event
     if (payment.payment_status === "SUCCESS") {
+      const qrCodeWithLogo = new QRCodeWithLogos({
+        content: `https://your-event-site.com/verify?orderId=${order.order_id}`, // URL for verification
+        width: 300,
+        // height: 300,
+        // color: "#8E46D5", // Dark purple
+        // backgroundColor: "#F4C0FD", // Light pink
+        // logo: {
+        //     src: "./public/pfe-logo.jpeg", // Path to your logo
+        //     logoSize: 0.2, // 20% of the QR code size
+        //     borderSize: 0.05,
+        // },
+    });
+
       const qrCodeDataUrl = await qrcode.toDataURL(order.order_id);
 
       await db.update(registrations)

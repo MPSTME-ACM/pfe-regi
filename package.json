@@ -17,6 +17,7 @@
     "next": "15.5.2",
     "pg-core": "^0.1.15",
     "qrcode": "^1.5.4",
+    "qrcode-with-logos": "^1.1.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "ts-node": "^10.9.2"
