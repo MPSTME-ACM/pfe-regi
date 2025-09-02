@@ -164,10 +164,10 @@ const StatusDisplay = () => {
                 pixelRatio: 3,
                 width: ticketRef.current.offsetWidth * 2,
                 height: ticketRef.current.offsetHeight * 2,
-                style: {
-                    transform: 'scale(2)',
-                    transformOrigin: 'top left',
-                }
+                // style: {
+                //     transform: 'scale(2)',
+                //     transformOrigin: 'top left',
+                // }
             })
                 .then((dataUrl) => {
                     const link = document.createElement('a');

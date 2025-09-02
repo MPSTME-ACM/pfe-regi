@@ -23,7 +23,13 @@ export async function GET() {
             return acc;
         }, {} as Record<string, number>);
 
-        return NextResponse.json({ success: true, counts: domainCounts });
+        const allDomains = ['C', 'Python', 'Web', 'DSA', 'AIML'];
+        const finalCounts = allDomains.reduce((acc, domain) => {
+            acc[domain] = domainCounts[domain] || 0;
+            return acc;
+        }, {} as Record<string, number>);
+
+        return NextResponse.json({ success: true, counts: finalCounts });
 
     } catch (error) {
         console.error('Failed to fetch domain counts:', error);

@@ -30,7 +30,7 @@ const ParticleBackground = () => {
     let animationFrameId: number;
     const characters = 'ACM MPSTME PFE PYTHON WEBDEV DSA AIML WORKSHOP CODING 2025';
     const fontSize = 16;
-    
+
     let columns: number;
     let drops: { y: number; char: string }[];
     let content: { text: string; y: number }[];
@@ -40,13 +40,13 @@ const ParticleBackground = () => {
 
       ctx.fillStyle = 'rgba(13, 13, 26, 0.1)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
+
       ctx.fillStyle = '#e97bfc';
       ctx.font = `${fontSize}px monospace`;
 
       for (let i = 0; i < columns; i++) {
         const drop = drops[i];
-        if(drop) {
+        if (drop) {
           ctx.fillText(drop.char, i * fontSize, drop.y * fontSize);
         }
       }
@@ -68,7 +68,7 @@ const ParticleBackground = () => {
         { text: 'PYTHON WORKSHOP 2025', y: canvas.height * 0.5 },
         { text: 'CODING WEBDEV DSA AIML', y: canvas.height * 0.7 },
       ];
-      
+
       draw();
     };
 
@@ -86,7 +86,7 @@ const ParticleBackground = () => {
     const update = () => {
       for (let i = 0; i < columns; i++) {
         const drop = drops[i];
-        if(!drop) continue;
+        if (!drop) continue;
 
         if (drop.y * fontSize > canvas.height && Math.random() > 0.995) {
           drop.y = 0;
@@ -224,20 +224,33 @@ const SelectField: React.FC<SelectFieldProps> = ({ label, name, options, value, 
       >
         <option value="" disabled>Select your option</option>
         {options.map((option) => {
-            // Logic to check if the domain is full
-            const count = domainCounts && domainCounts[option] ? domainCounts[option] : 0;
+          // Only apply domain logic for the 'domain' field
+          if (name === 'domain' && domainCounts) {
+            const count = domainCounts[option] || 0;
             const isFull = count >= 60;
 
             return (
-                <option
-                    key={option}
-                    value={option}
-                    disabled={isFull}
-                    className="bg-[#1a0d1f] text-white disabled:text-gray-500"
-                >
-                    {option} {domainCounts ? (isFull ? '(Full)' : `(${60 - count} seats left)`) : ''}
-                </option>
+              <option
+                key={option}
+                value={option}
+                disabled={isFull}
+                className="bg-[#1a0d1f] text-white disabled:text-gray-500"
+              >
+                {option} {isFull ? '(Full)' : `(${60 - count} seats left)`}
+              </option>
             );
+          }
+
+          // For other selects, just show the option
+          return (
+            <option
+              key={option}
+              value={option}
+              className="bg-[#1a0d1f] text-white"
+            >
+              {option}
+            </option>
+          );
         })}
       </select>
     </div>
@@ -264,11 +277,17 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ formData, handleInp
     <div>
       <InputField label="Your Name" type="text" placeholder="Enter your full name" name="name" value={formData.name} onChange={handleInputChange} required />
       <InputField label="Your Email" type="email" placeholder="youremail@domain.com" name="email" value={formData.email} onChange={handleInputChange} required error={errors.email} />
-      <InputField label="Contact Number" type="tel" placeholder="9876543210" name="contact" value={formData.contact} onChange={handleInputChange} required error={errors.contact}/>
+      <InputField label="Contact Number" type="tel" placeholder="9876543210" name="contact" value={formData.contact} onChange={handleInputChange} required error={errors.contact} />
       <SelectField label="Course" name="course" options={courses} value={formData.course} onChange={handleInputChange} required />
       <SelectField label="Department" name="department" options={departments} value={formData.department} onChange={handleInputChange} required />
       <SelectField label="Current Academic Year" name="year" options={years} value={formData.year} onChange={handleInputChange} required />
       <SelectField label="Choose one domain to participate in" name="domain" options={domains} value={formData.domain} onChange={handleInputChange} required domainCounts={domainCounts} />
+      <InputField label="Referral"
+        type="text"
+        name="referral"
+        value={formData.referral}
+        onChange={handleInputChange}
+        placeholder="Optional" />
     </div>
   );
 };
@@ -284,6 +303,7 @@ export default function Home() {
     department: '',
     year: '',
     domain: '',
+    referral: '',
   });
   const router = useRouter();
   const [progress, setProgress] = useState(0);
@@ -324,31 +344,31 @@ export default function Home() {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     if (name === 'email' || name === 'contact') {
-            setFormErrors(prev => ({ ...prev, [name]: '' }));
-        }
+      setFormErrors(prev => ({ ...prev, [name]: '' }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        const contactRegex = /^[6-9]\d{9}$/;
-        const errors = { email: '', contact: '' };
-        let isValid = true;
+    const contactRegex = /^[6-9]\d{9}$/;
+    const errors = { email: '', contact: '' };
+    let isValid = true;
 
-        if (!emailRegex.test(formData.email)) {
-            errors.email = 'Please enter a valid email address.';
-            isValid = false;
-        }
-        if (!contactRegex.test(formData.contact)) {
-            errors.contact = 'Please enter a valid 10-digit mobile number.';
-            isValid = false;
-        }
+    if (!emailRegex.test(formData.email)) {
+      errors.email = 'Please enter a valid email address.';
+      isValid = false;
+    }
+    if (!contactRegex.test(formData.contact)) {
+      errors.contact = 'Please enter a valid 10-digit mobile number.';
+      isValid = false;
+    }
 
-        setFormErrors(errors);
-        if (!isValid) return; // Stop submission if there are errors
+    setFormErrors(errors);
+    if (!isValid) return; // Stop submission if there are errors
 
-        setIsLoading(true);
+    setIsLoading(true);
 
     if (!cashfree) {
       console.error("Cashfree SDK not initialized yet.");
@@ -367,12 +387,20 @@ export default function Home() {
 
       if (data.success && data.payment_session_id) {
         setPaymentSessionId(data.payment_session_id);
-        setOrderId(data.order_id); 
+        setOrderId(data.order_id);
         // The checkout will be rendered in a useEffect hook when paymentSessionId is set
       } else {
-        console.error('Failed to create order:', data.message);
-        setIsLoading(false);
+
+        if (data.error === 'DOMAIN_FULL') {
+          alert(`${data.message}\n\nPlease refresh the page and select a different domain.`);
+          // Optionally refresh domain counts
+          window.location.reload();
+        } else {
+          alert(data.message || 'Failed to create order. Please try again.');
+        }
       }
+
+      setIsLoading(false);
     } catch (error) {
       console.error('An error occurred:', error);
       setIsLoading(false);
@@ -384,37 +412,72 @@ export default function Home() {
       const checkoutOptions = {
         paymentSessionId: paymentSessionId,
         redirectTarget: "_modal", // Use "_self" to render in the same container
+
+        appearance: {
+          theme: 'dark',
+          variables: {
+            colorPrimary: '#e97bfc',
+            colorBackground: '#000000',
+            colorText: '#ffffff',
+            colorTextSecondary: '#e97bfc',
+            fontFamily: 'inherit',
+            borderRadius: '8px'
+          }
+        },
+        // Alternative method using style object (if appearance doesn't work)
+        style: {
+          base: {
+            color: '#ffffff',
+            backgroundColor: '#000000',
+            fontSize: '16px',
+            fontFamily: 'inherit',
+            '::placeholder': {
+              color: '#e97bfc'
+            }
+          },
+          focus: {
+            color: '#e97bfc',
+            borderColor: '#e97bfc'
+          },
+          invalid: {
+            color: '#ff3333',
+            borderColor: '#ff3333'
+          },
+          complete: {
+            color: '#7A9B76'
+          }
+        }
       };
       cashfree.checkout(checkoutOptions).then((result: CheckoutResult) => {
         // console.log(JSON.stringify(result));
-            if(result.error){
-                // This will be true whenever user clicks on close icon inside the modal or any error happens during the payment
-                // console.log("User has closed the popup or there is some payment error, Check for Payment Status");
-                // console.log(result.error);
-            }
-            if(result.redirect){
-                // This will be true when the payment redirection page couldnt be opened in the same window
-                // This is an exceptional case only when the page is opened inside an inAppBrowser
-                // In this case the customer will be redirected to return url once payment is completed
-                // console.log("Payment will be redirected");
-            }
-            if(result.paymentDetails){
-                // This will be called whenever the payment is completed irrespective of transaction status
-                // console.log("Payment has been completed, Check for Payment Status");
-                // console.log(result.paymentDetails.paymentMessage);
-            }
-            if (result.paymentDetails || result.error) {
-            // If the process is finished (success, fail, or closed), redirect to the status page.
-            // Our /api/get-status route will determine the final outcome.
-            if (orderId) {
-                router.push(`/payment-status?order_id=${orderId}`);
-            } else {
-                // Fallback if something went wrong and we don't have the orderId
-                console.error("Order ID not available for redirect.");
-                setIsLoading(false);
-            }
+        if (result.error) {
+          // This will be true whenever user clicks on close icon inside the modal or any error happens during the payment
+          // console.log("User has closed the popup or there is some payment error, Check for Payment Status");
+          // console.log(result.error);
         }
-        });
+        if (result.redirect) {
+          // This will be true when the payment redirection page couldnt be opened in the same window
+          // This is an exceptional case only when the page is opened inside an inAppBrowser
+          // In this case the customer will be redirected to return url once payment is completed
+          // console.log("Payment will be redirected");
+        }
+        if (result.paymentDetails) {
+          // This will be called whenever the payment is completed irrespective of transaction status
+          // console.log("Payment has been completed, Check for Payment Status");
+          // console.log(result.paymentDetails.paymentMessage);
+        }
+        if (result.paymentDetails || result.error) {
+          // If the process is finished (success, fail, or closed), redirect to the status page.
+          // Our /api/get-status route will determine the final outcome.
+          if (orderId) {
+            router.push(`/payment-status?order_id=${orderId}`);
+          } else {
+            // Fallback if something went wrong and we don't have the orderId
+            console.error("Order ID not available for redirect.");
+            setIsLoading(false);
+          }
+        }
+      });
       setIsLoading(false); // Stop loading once checkout is rendered
     }
   }, [paymentSessionId, cashfree]);
@@ -424,15 +487,15 @@ export default function Home() {
 
   useEffect(() => {
     const fetchDomainCounts = async () => {
-        try {
-            const response = await fetch('/api/domain-counts');
-            const data = await response.json();
-            if (data.success) {
-                setDomainCounts(data.counts);
-            }
-        } catch (error) {
-            console.error("Failed to fetch domain counts:", error);
+      try {
+        const response = await fetch('/api/domain-counts');
+        const data = await response.json();
+        if (data.success) {
+          setDomainCounts(data.counts);
         }
+      } catch (error) {
+        console.error("Failed to fetch domain counts:", error);
+      }
     };
     fetchDomainCounts();
   }, []); // Empty array ensures this runs only once on page load
@@ -445,9 +508,6 @@ export default function Home() {
   return (
     <>
       <style jsx global>{`
-        html, body {
-            background-color: transparent !important;
-        }
         .progress-glow-container {
             position: relative;
             padding: 2px;
@@ -470,13 +530,12 @@ export default function Home() {
         }
       `}</style>
       <main className="min-h-screen text-white font-sans flex items-center justify-center p-4 sm:p-6 md:p-8">
-        {/* <ParticleBackground /> */}
         <div className="w-full max-w-3xl bg-black/50 backdrop-blur-md rounded-2xl border border-white/10 progress-glow-container">
           <div className="p-8 sm:p-10 md:p-12">
             <Header />
             {!paymentSessionId ? (
               <form onSubmit={handleSubmit}>
-                <RegistrationForm formData={formData} handleInputChange={handleInputChange} domainCounts={domainCounts} errors={formErrors}/>
+                <RegistrationForm formData={formData} handleInputChange={handleInputChange} domainCounts={domainCounts} errors={formErrors} />
                 <div className="mt-10 text-center">
                   <div className="">
                     <p className="mb-2 text-2xl font-bold text-white">Ticket Price: ₹100</p>

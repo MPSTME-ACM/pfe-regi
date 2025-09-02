@@ -13,7 +13,8 @@ export const registrations = pgTable('pferegistration', {
   paymentStatus: text('payment_status', { enum: ['pending', 'success', 'failure'] }).default('pending'),
   qrCodeUrl: text('qr_code_url'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-  attendance: jsonb('attendance').$type<boolean[]>().default([false, false, false]).notNull()
+  attendance: jsonb('attendance').$type<boolean[]>().default([false, false, false]).notNull(),
+  referral: text('referral'),
 },
 (table) => ({
   emailIdx: index('email_idx').on(table.email)
