@@ -194,9 +194,10 @@ interface SelectFieldProps {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   required?: boolean;
+  domainCounts?: Record<string, number>;
 }
 
-const SelectField: React.FC<SelectFieldProps> = ({ label, name, options, value, onChange, required = false }) => {
+const SelectField: React.FC<SelectFieldProps> = ({ label, name, options, value, onChange, required = false, domainCounts }) => {
   return (
     <div className="mb-6">
       <label htmlFor={name} className="block text-sm font-medium text-gray-300 mb-2">
@@ -218,11 +219,22 @@ const SelectField: React.FC<SelectFieldProps> = ({ label, name, options, value, 
         }}
       >
         <option value="" disabled>Select your option</option>
-        {options.map((option) => (
-          <option key={option} value={option} className="bg-[#1a0d1f] text-white">
-            {option}
-          </option>
-        ))}
+        {options.map((option) => {
+            // Logic to check if the domain is full
+            const count = domainCounts && domainCounts[option] ? domainCounts[option] : 0;
+            const isFull = count >= 60;
+
+            return (
+                <option
+                    key={option}
+                    value={option}
+                    disabled={isFull}
+                    className="bg-[#1a0d1f] text-white disabled:text-gray-500"
+                >
+                    {option} {domainCounts ? (isFull ? '(Full)' : `(${60 - count} seats left)`) : ''}
+                </option>
+            );
+        })}
       </select>
     </div>
   );
@@ -232,8 +244,9 @@ const SelectField: React.FC<SelectFieldProps> = ({ label, name, options, value, 
 interface RegistrationFormProps {
   formData: Record<string, string>;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
+  domainCounts: Record<string, number>;
 }
-const RegistrationForm: React.FC<RegistrationFormProps> = ({ formData, handleInputChange }) => {
+const RegistrationForm: React.FC<RegistrationFormProps> = ({ formData, handleInputChange, domainCounts }) => {
   const domains = ['C', 'Python', 'Web', 'DSA', 'AIML'];
   const years = ['First Year', 'Second Year', 'Third Year', 'Fourth Year', 'Fifth Year'];
   const courses = ['BTI', 'BTech', 'MBA Tech'];
@@ -250,7 +263,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ formData, handleInp
       <SelectField label="Course" name="course" options={courses} value={formData.course} onChange={handleInputChange} required />
       <SelectField label="Department" name="department" options={departments} value={formData.department} onChange={handleInputChange} required />
       <SelectField label="Current Academic Year" name="year" options={years} value={formData.year} onChange={handleInputChange} required />
-      <SelectField label="Choose one domain to participate in" name="domain" options={domains} value={formData.domain} onChange={handleInputChange} required />
+      <SelectField label="Choose one domain to participate in" name="domain" options={domains} value={formData.domain} onChange={handleInputChange} required domainCounts={domainCounts} />
     </div>
   );
 };
@@ -275,6 +288,7 @@ export default function Home() {
   const [paymentSessionId, setPaymentSessionId] = useState<string | null>(null);
   const [merchantName, setMerchantName] = useState('');
   const [merchantEmail, setMerchantEmail] = useState('');
+  const [domainCounts, setDomainCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     setMerchantName(process.env.NEXT_PUBLIC_MERCHANT_NAME || 'ACM MPSTME');
@@ -379,6 +393,25 @@ export default function Home() {
   const headPosition = progress;
   const bodyPosition = Math.max(0, progress - 1);
 
+  useEffect(() => {
+    const fetchDomainCounts = async () => {
+        try {
+            const response = await fetch('/api/domain-counts');
+            const data = await response.json();
+            if (data.success) {
+                setDomainCounts(data.counts);
+            }
+        } catch (error) {
+            console.error("Failed to fetch domain counts:", error);
+        }
+    };
+    fetchDomainCounts();
+  }, []); // Empty array ensures this runs only once on page load
+
+  useEffect(() => {
+    const filledFields = Object.values(formData).filter(value => value !== '').length;
+    setProgress((filledFields / totalFields) * 100);
+  }, [formData, totalFields]);
 
   return (
     <>
@@ -414,7 +447,7 @@ export default function Home() {
             <Header />
             {!paymentSessionId ? (
               <form onSubmit={handleSubmit}>
-                <RegistrationForm formData={formData} handleInputChange={handleInputChange} />
+                <RegistrationForm formData={formData} handleInputChange={handleInputChange} domainCounts={domainCounts} />
                 <div className="mt-10 text-center">
                   <div className="">
                     <p className="mb-2 text-2xl font-bold text-white">Ticket Price: ₹100</p>
