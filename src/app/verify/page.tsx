@@ -73,7 +73,7 @@ const QrScanner = ({ onScanSuccess, onScanError, onStop }: { onScanSuccess: (dec
         return () => {
             if (scanner) {
                 // Check if the scanner has been initialized before trying to clear
-                scanner.clear().catch((error: any) => console.error("Failed to clear scanner.", error));
+                scanner.clear().catch((error: Error) => console.error("Failed to clear scanner.", error));
             }
         };
     }, [onScanSuccess, onScanError]);
@@ -137,7 +137,7 @@ const VerificationDisplay = ({ orderId, authCreds }: { orderId: string, authCred
             });
             if (!response.ok) throw new Error('Failed to save attendance.');
             alert('Attendance updated successfully!');
-        } catch (err) {
+        } catch (err: unknown) {
             alert(err instanceof Error ? err.message : 'An error occurred.');
         }
     };
@@ -228,7 +228,7 @@ const VerifyPageContent = () => {
     }
 
     if (isScanning) {
-        return <QrScanner onScanSuccess={onScanSuccess} onScanError={(err) => console.warn(err)} onStop={() => setIsScanning(false)} />;
+        return <QrScanner onScanSuccess={onScanSuccess} onScanError={(err: Error) => console.warn(err.message)} onStop={() => setIsScanning(false)} />;
     }
 
     return (
