@@ -15,7 +15,7 @@ const StatusDisplay = () => {
     const [status, setStatus] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [details, setDetails] = useState<RegistrationDetails | null>(null);
-    
+
     // Combined into a single useEffect to prevent re-render loops.
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -60,6 +60,8 @@ const StatusDisplay = () => {
     }
 
     if (status === 'Success' && details) {
+        console.log('Rendering success with details:', details); // Debug log
+        console.log('QR Code URL:', details.qrCodeUrl); // Debug log
         return (
             <div className="w-full max-w-md bg-gray-900/50 backdrop-blur-lg rounded-2xl p-8 border border-pink-500/30 shadow-2xl shadow-pink-500/20 animate-fade-in">
                 <div className="text-center">
@@ -69,10 +71,13 @@ const StatusDisplay = () => {
                     <h1 className="text-2xl font-bold text-green-400">Payment Successful!</h1>
                     <p className="text-gray-300 mt-1">Your ticket is ready.</p>
                 </div>
-                
+
                 <div className="mt-8 text-center">
+
+                    <p className="text-xs text-gray-500 mb-2">QR Code Status: {details.qrCodeUrl ? 'Available' : 'Not Available'}</p>
+
                     {details.qrCodeUrl && (
-                        <Image src={details.qrCodeUrl} alt="Your QR Code" width={192} height={192} className="w-48 h-48 mx-auto rounded-lg bg-white p-2" />
+                        <img src={details.qrCodeUrl} alt="Your QR Code" width={192} height={192} className="w-48 h-48 mx-auto rounded-lg bg-white p-2" />
                     )}
                 </div>
 
@@ -101,7 +106,7 @@ const StatusDisplay = () => {
             default:
                 return (
                     <div className="text-center">
-                         <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto mb-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto mb-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                         </svg>
                         <h1 className="text-4xl font-bold text-red-500 mb-4">Payment Failed</h1>
@@ -110,7 +115,7 @@ const StatusDisplay = () => {
                 );
         }
     };
-    
+
     return (
         <div className="text-center">
             {renderFallbackStatus()}
