@@ -64,6 +64,14 @@ export async function POST(request: Request) {
     const firstInitial = firstName.charAt(0).toUpperCase();
     const lastInitial = lastName ? lastName.charAt(0).toUpperCase() : '';
 
+    const allowedDomains = ['C', 'Python', 'Web', 'DSA', 'AIML'];
+    if (!allowedDomains.includes(formData.domain)) {
+      return NextResponse.json({
+        success: false,
+        message: `Sorry, the ${formData.domain} domain is invalid.`,
+        error: 'DOMAIN_INVALID'
+      }, { status: 400 });
+    }
     // Combine the initials and other data
     const orderId = `${firstInitial}${lastInitial}${formData.contact.slice(-4)}${currentDate}${currentHour}${formData.domain.charAt(0).toUpperCase()}`;
 

@@ -1,23 +1,48 @@
-// app/api/webhook/route.ts
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { db } from '@/lib/db';
 import { registrations } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import qrcode from 'qrcode';
-import QRCodeWithLogos from 'qrcode-with-logos';
+import { sendMail } from '@/lib/mail/mailUtil';
+import 'dotenv/config';
+
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
+async function getRawBody(request: Request): Promise<Buffer> {
+  const readableStream = request.body;
+  const reader = readableStream?.getReader();
+  const chunks: Uint8Array[] = [];
+
+  if (!reader) {
+    throw new Error('Unable to read request body');
+  }
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value) chunks.push(value);
+  }
+
+  return Buffer.concat(chunks);
+}
 
 export async function POST(request: Request) {
   try {
     const signature = request.headers.get("x-webhook-signature");
     const timestamp = request.headers.get("x-webhook-timestamp");
-    const payload = await request.text();
 
-    if (!signature || !timestamp || !payload) {
+    if (!signature || !timestamp) {
       return NextResponse.json({ success: false, message: 'Missing webhook headers or payload' }, { status: 400 });
     }
 
-    const dataToVerify = `${timestamp}${payload}`;
+    const rawBodyBuffer = await getRawBody(request);
+    const rawBody = rawBodyBuffer.toString('utf-8');
+    const dataToVerify = `${timestamp}${rawBody}`;
     const secretKey = process.env.CASHFREE_WEBHOOK_SECRET!;
 
     const expectedSignature = crypto
@@ -25,9 +50,16 @@ export async function POST(request: Request) {
       .update(dataToVerify)
       .digest('base64');
 
-    const isSignatureValid = (expectedSignature === signature);
+    const isSignatureValid = expectedSignature === signature;
+    if (!isSignatureValid) {
+      console.error('Invalid webhook signature');
+      return NextResponse.json(
+        { success: false, message: 'Invalid webhook signature' },
+        { status: 400 }
+      );
+    }
 
-    const eventData = JSON.parse(payload);
+    const eventData = JSON.parse(rawBody);
     const order = eventData.data.order;
     const payment = eventData.data.payment;
 
@@ -44,6 +76,22 @@ export async function POST(request: Request) {
           qrCodeUrl: qrCodeDataUrl
         })
         .where(eq(registrations.orderId, order.order_id));
+        
+        // Send out email at this stage
+        const allowedDomains = {
+          C: 'C',
+          P: 'Python',
+          W: 'Web',
+          D: 'DSA',
+          A: 'AIML'
+        } as const;
+        const domainChar = order.order_id.toString().slice(-1) as keyof typeof allowedDomains;
+        const domain = allowedDomains[domainChar];
+
+        const mail = eventData.customer_details.customer_email;
+        const name = eventData.customer_details.customer_name;
+
+        sendMail(mail, domain, name, qrCodeDataUrl);
 
       // console.log(`Database updated for order ${order.order_id}: SUCCESS`);
     } else if (payment.payment_status === "FAILED" || payment.payment_status === "USER_DROPPED") {
