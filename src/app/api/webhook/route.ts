@@ -60,8 +60,7 @@ export async function POST(request: Request) {
     }
 
     const eventData = JSON.parse(rawBody);
-    const order = eventData.data.order;
-    const payment = eventData.data.payment;
+    const { order, payment, customer_details } = eventData.data;
 
     // --- DATABASE INTEGRATION ---
     // Update the payment status in the database based on the webhook event
@@ -88,8 +87,8 @@ export async function POST(request: Request) {
         const domainChar = order.order_id.toString().slice(-1) as keyof typeof allowedDomains;
         const domain = allowedDomains[domainChar];
 
-        const mail = eventData.customer_details.customer_email;
-        const name = eventData.customer_details.customer_name;
+        const mail = customer_details.customer_email;
+        const name = customer_details.customer_name;
 
         sendMail(mail, domain, name, qrCodeDataUrl);
 

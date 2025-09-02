@@ -23,6 +23,7 @@ export async function POST(request: Request) {
     // Uses user's contact number and the current timestamp.
     const now = new Date();
 
+    console.log('🔍 Checking domain registration count for:', formData.domain);
     const domainCheckQuery = await db
       .select({ count: count(registrations.id) })
       .from(registrations)
@@ -34,6 +35,7 @@ export async function POST(request: Request) {
       );
 
     const currentDomainCount = domainCheckQuery[0]?.count || 0;
+    console.log(`✅ Domain '${formData.domain}' has ${currentDomainCount} successful registrations.`);
 
     if (currentDomainCount >= 60) {
       return NextResponse.json({
