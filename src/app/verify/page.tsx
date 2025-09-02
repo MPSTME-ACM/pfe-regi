@@ -1,7 +1,9 @@
 "use client";
 import React, { useState, useEffect, Suspense } from 'react';
+// Use a type-only import to satisfy TypeScript without affecting the runtime
+import type { Html5QrcodeScanner, QrcodeSuccessCallback } from 'html5-qrcode';
 
-// Define the type for registration data, including attendance
+// --- Type Definitions ---
 interface RegistrationDetails {
     name: string;
     domain: string;
@@ -54,17 +56,13 @@ const AdminLogin = ({ onLogin, error, setError }: { onLogin: (user: string, pass
 };
 
 // --- QR Code Scanner Component ---
-const QrScanner = ({ onScanSuccess, onScanError, onStop }: { onScanSuccess: (decodedText: string) => void, onScanError: (error: any) => void, onStop: () => void }) => {
+const QrScanner = ({ onScanSuccess, onScanError, onStop }: { onScanSuccess: QrcodeSuccessCallback, onScanError: (error: string) => void, onStop: () => void }) => {
     useEffect(() => {
-        let scanner: any;
+        let scanner: Html5QrcodeScanner | null = null;
 
-        // FIX: Dynamically import the library to ensure it only runs on the client-side.
         import('html5-qrcode').then(({ Html5QrcodeScanner }) => {
-            scanner = new Html5QrcodeScanner(
-                "reader", 
-                { fps: 10, qrbox: { width: 250, height: 250 } }, 
-                false
-            );
+            if (!document.getElementById('reader')) return;
+            scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: { width: 250, height: 250 } }, false);
             scanner.render(onScanSuccess, onScanError);
         }).catch((err: unknown) => {
             console.error("Failed to load Html5QrcodeScanner", err);
@@ -72,16 +70,15 @@ const QrScanner = ({ onScanSuccess, onScanError, onStop }: { onScanSuccess: (dec
 
         return () => {
             if (scanner) {
-                // Check if the scanner has been initialized before trying to clear
-                scanner.clear().catch((error: Error) => console.error("Failed to clear scanner.", error));
+                scanner.clear().catch((error: unknown) => console.error("Failed to clear scanner.", error));
             }
         };
     }, [onScanSuccess, onScanError]);
 
     return (
         <div className="w-full max-w-md p-6 bg-black/50 backdrop-blur-md rounded-2xl border border-white/10 shadow-2xl shadow-[#e97bfc]/10">
-            <div id="reader" className="w-full bg-black rounded-lg overflow-hidden"></div>
-            <button onClick={onStop} className="w-full mt-4 bg-red-600 text-white font-bold py-2 rounded-lg hover:bg-red-700 transition-colors">
+            <div id="reader" className="w-full bg-black rounded-lg overflow-hidden border border-white/10"></div>
+            <button onClick={onStop} className="w-full mt-4 text-center text-red-500 font-bold py-3 px-8 rounded-lg border-2 border-red-500 transition-all duration-300 ease-in-out transform hover:bg-red-500/10 active:scale-95">
                 Close Scanner
             </button>
         </div>
@@ -158,15 +155,15 @@ const VerificationDisplay = ({ orderId, authCreds }: { orderId: string, authCred
             <div>
                 <h2 className="text-xl font-bold mb-4">Mark Attendance</h2>
                 <div className="flex justify-around">
-                    {attendance.map((attended, index) => (
+                    {[...Array(4)].map((_, index) => (
                         <div key={index} className="flex flex-col items-center gap-2">
                             <label htmlFor={`day-${index}`} className="text-gray-300">Day {index + 1}</label>
                             <input
                                 type="checkbox"
                                 id={`day-${index}`}
-                                checked={attended}
+                                checked={attendance[index] || false}
                                 onChange={() => handleAttendanceChange(index)}
-                                className="w-6 h-6 rounded text-[#e97bfc] bg-gray-700 border-gray-600 focus:ring-[#e97bfc] focus:ring-offset-0"
+                                className="w-6 h-6 rounded text-[#e97bfc] bg-gray-700 border-gray-600 focus:ring-[#e97bfc] focus:ring-offset-0 cursor-pointer"
                             />
                         </div>
                     ))}
@@ -188,11 +185,10 @@ const VerifyPageContent = () => {
 
     useEffect(() => {
         const storedCreds = sessionStorage.getItem('admin-creds');
-        if (storedCreds) {
-            setAuthCreds(storedCreds);
-        }
+        if (storedCreds) { setAuthCreds(storedCreds); }
         const params = new URLSearchParams(window.location.search);
-        setOrderId(params.get('orderId'));
+        const id = params.get('orderId');
+        if (id) { setOrderId(id); }
     }, []);
 
     const handleLogin = (user: string, pass: string) => {
@@ -205,47 +201,56 @@ const VerifyPageContent = () => {
         sessionStorage.removeItem('admin-creds');
         setAuthCreds(null);
         setError('');
+        window.history.pushState({}, '', '/verify');
+        setOrderId(null);
     };
 
-    const onScanSuccess = (decodedText: string) => {
+    const onScanSuccess: QrcodeSuccessCallback = (decodedText) => {
         try {
             const url = new URL(decodedText);
             const id = url.searchParams.get('orderId');
             if (id) {
-                window.location.href = `/verify?orderId=${id}`;
-            } else {
-                throw new Error("No orderId found in QR code.");
-            }
+                // Use window.history to change URL without a full page reload,
+                // triggering the details fetch.
+                window.history.pushState({}, '', `/verify?orderId=${id}`);
+                setOrderId(id);
+            } else { throw new Error("No orderId found in QR code."); }
         } catch (err: unknown) {
             console.error("QR Scan Error:", err);
             alert("Invalid QR Code. Please scan a valid PFE Ticket.");
         }
         setIsScanning(false);
     };
+    
+    // FIX: Explicitly type the error message parameter as a string
+    const onScanError = (errorMessage: string) => {
+        // This callback is required but we can choose to ignore minor errors.
+    };
 
     if (!authCreds) {
         return <AdminLogin onLogin={handleLogin} error={error} setError={setError} />;
     }
-
-    if (isScanning) {
-        return <QrScanner onScanSuccess={onScanSuccess} onScanError={(err: Error) => console.warn(err.message)} onStop={() => setIsScanning(false)} />;
-    }
-
+    
     return (
         <div className="relative w-full max-w-md flex flex-col items-center">
-             <button onClick={handleLogout} className="absolute -top-4 -right-4 text-sm text-gray-400 hover:text-white">Logout</button>
+             <button onClick={handleLogout} className="absolute -top-6 right-0 text-sm text-gray-400 hover:text-white transition-colors">Logout</button>
             
-            {orderId ? (
+            {isScanning ? (
+                 <QrScanner onScanSuccess={onScanSuccess} onScanError={onScanError} onStop={() => setIsScanning(false)} />
+            ) : orderId ? (
                 <VerificationDisplay orderId={orderId} authCreds={authCreds} />
             ) : (
                 <div className="text-center p-8 bg-black/50 backdrop-blur-md rounded-2xl border border-white/10">
-                    <p className="text-2xl text-yellow-500">Scan a ticket to begin.</p>
+                    <h1 className="text-3xl font-bold text-white mb-2">Ready to Verify</h1>
+                    <p className="text-gray-400">Click the button below to start scanning.</p>
                 </div>
             )}
 
-            <button onClick={() => setIsScanning(true)} className="w-auto mx-auto mt-8 text-center text-lg text-[#e97bfc] font-bold transition-all duration-300 transform hover:scale-110 hover:shadow-lg hover:shadow-[#e97bfc]/20">
-                Scan Next Ticket
-            </button>
+            {!isScanning && (
+                <button onClick={() => setIsScanning(true)} className="w-auto mx-auto mt-8 text-center text-lg text-[#e97bfc] font-bold transition-all duration-300 transform hover:scale-110 hover:text-[#f8c8fc] hover:drop-shadow-[0_0_10px_#e97bfc]">
+                    Scan Next Ticket
+                </button>
+            )}
         </div>
     );
 }
@@ -253,9 +258,7 @@ const VerifyPageContent = () => {
 // --- Main Page Component ---
 export default function VerifyPage() {
     return (
-        <main className="min-h-screen bg-[#0d0d1a] text-white flex items-center justify-center p-4 font-sans relative overflow-hidden">
-            {/* Re-using the animated gradient from main page */}
-            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[#0d0d1a] via-[#1a0d1d] to-[#0d0d1a] animate-gradient-xy -z-10"></div>
+        <main className="min-h-screen bg-transparent text-white flex items-center justify-center p-4 font-sans">
             <Suspense fallback={<div className="text-2xl">Loading...</div>}>
                 <VerifyPageContent />
             </Suspense>
