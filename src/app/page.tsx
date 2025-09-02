@@ -343,22 +343,22 @@ export default function Home() {
         redirectTarget: "_modal", // Use "_self" to render in the same container
       };
       cashfree.checkout(checkoutOptions).then((result: CheckoutResult) => {
-        console.log(JSON.stringify(result));
+        // console.log(JSON.stringify(result));
             if(result.error){
                 // This will be true whenever user clicks on close icon inside the modal or any error happens during the payment
-                console.log("User has closed the popup or there is some payment error, Check for Payment Status");
-                console.log(result.error);
+                // console.log("User has closed the popup or there is some payment error, Check for Payment Status");
+                // console.log(result.error);
             }
             if(result.redirect){
                 // This will be true when the payment redirection page couldnt be opened in the same window
                 // This is an exceptional case only when the page is opened inside an inAppBrowser
                 // In this case the customer will be redirected to return url once payment is completed
-                console.log("Payment will be redirected");
+                // console.log("Payment will be redirected");
             }
             if(result.paymentDetails){
                 // This will be called whenever the payment is completed irrespective of transaction status
-                console.log("Payment has been completed, Check for Payment Status");
-                console.log(result.paymentDetails.paymentMessage);
+                // console.log("Payment has been completed, Check for Payment Status");
+                // console.log(result.paymentDetails.paymentMessage);
             }
             if (result.paymentDetails || result.error) {
             // If the process is finished (success, fail, or closed), redirect to the status page.
@@ -417,7 +417,7 @@ export default function Home() {
                 <RegistrationForm formData={formData} handleInputChange={handleInputChange} />
                 <div className="mt-10 text-center">
                   <div className="">
-                    <p className="mb-2 text-2xl font-bold text-white">Ticket Price: ₹99</p>
+                    <p className="mb-2 text-2xl font-bold text-white">Ticket Price: ₹100</p>
                     {merchantName && (
                       <p className="mb-2 text-sm text-gray-500">
                         You will be securely redirected to our payment partner to complete your payment to{' '}

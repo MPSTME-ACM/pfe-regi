@@ -8,7 +8,7 @@ export default function TermsOfServicePage() {
                     <p>Welcome to the PFE - Programming For Everyone workshop hosted by ACM MPSTME. By registering for this event, you agree to comply with and be bound by the following terms and conditions of use. Please review the following terms carefully.</p>
                     
                     <h2 className="text-2xl font-bold text-[#f8c8fc] pt-4">1. Registration and Payment</h2>
-                    <p>All registrations must be completed via the official registration form. The ticket price of ₹99 is non-negotiable and must be paid in full to confirm your participation. All payments are processed through our secure payment gateway, Cashfree Payments.</p>
+                    <p>All registrations must be completed via the official registration form. The ticket price of ₹100 is non-negotiable and must be paid in full to confirm your participation. All payments are processed through our secure payment gateway, Cashfree Payments.</p>
 
                     <h2 className="text-2xl font-bold text-[#f8c8fc] pt-4">2. Code of Conduct</h2>
                     <p>All attendees are expected to conduct themselves in a professional and respectful manner. Harassment, discrimination, or any disruptive behavior will not be tolerated and may result in immediate removal from the workshop without a refund.</p>
