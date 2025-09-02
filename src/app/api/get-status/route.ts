@@ -37,7 +37,13 @@ export async function POST(request: Request) {
         orderStatus = "Success";
         const result = await db.select().from(registrations).where(eq(registrations.orderId, order_id));
         if (result.length > 0) {
-          registrationDetails = result[0];
+          const dbRecord = result[0];
+          registrationDetails = {
+            name: dbRecord.name,
+            domain: dbRecord.domain,
+            orderId: dbRecord.orderId,
+            qrCodeUrl: dbRecord.qrCodeUrl
+          }
         }
       } else {
         const pendingTx = paymentData.find(tx => tx.payment_status === "PENDING");
@@ -50,7 +56,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       status: orderStatus,
-      details: paymentData
+      details: registrationDetails
     });
 
   } catch (error) {

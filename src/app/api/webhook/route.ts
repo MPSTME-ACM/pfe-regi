@@ -37,22 +37,11 @@ export async function POST(request: Request) {
     // --- DATABASE INTEGRATION ---
     // Update the payment status in the database based on the webhook event
     if (payment.payment_status === "SUCCESS") {
-      const qrCodeWithLogo = new QRCodeWithLogos({
-        content: `https://your-event-site.com/verify?orderId=${order.order_id}`, // URL for verification
-        width: 300,
-        // height: 300,
-        // color: "#8E46D5", // Dark purple
-        // backgroundColor: "#F4C0FD", // Light pink
-        // logo: {
-        //     src: "./public/pfe-logo.jpeg", // Path to your logo
-        //     logoSize: 0.2, // 20% of the QR code size
-        //     borderSize: 0.05,
-        // },
-    });
+      // Generate QR code
+      const qrCodeDataUrl = await qrcode.toDataURL(`https://your-event-site.com/verify?orderId=${order.order_id}`);
 
-      const qrCodeDataUrl = await qrcode.toDataURL(order.order_id);
-
-      await db.update(registrations)
+      // Update database
+      const updateResult = await db.update(registrations)
         .set({
           paymentStatus: 'success',
           qrCodeUrl: qrCodeDataUrl
@@ -61,7 +50,7 @@ export async function POST(request: Request) {
 
       // console.log(`Database updated for order ${order.order_id}: SUCCESS`);
     } else if (payment.payment_status === "FAILED" || payment.payment_status === "USER_DROPPED") {
-      await db.update(registrations)
+      const updateResult = await db.update(registrations)
         .set({ paymentStatus: 'failure' })
         .where(eq(registrations.orderId, order.order_id));
       // console.log(`Database updated for order ${order.order_id}: FAILURE`);
