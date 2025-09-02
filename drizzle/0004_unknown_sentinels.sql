@@ -1,0 +1,1 @@
+ALTER TABLE "pferegistration" ADD COLUMN "referral" text;

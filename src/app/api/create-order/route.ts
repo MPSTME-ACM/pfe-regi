@@ -5,20 +5,14 @@ import { db } from '@/lib/db';
 import { registrations } from '@/lib/db/schema';
 import { and, eq, count } from 'drizzle-orm';
 
-// IMPORTANT: Ensure your .env.local file is set up
-// NEXT_PUBLIC_CASHFREE_APP_ID=YOUR_APP_ID
-// NEXT_PUBLIC_CASHFREE_SECRET_KEY=YOUR_SECRET_KEY
-// CASHFREE_ENV=SANDBOX or PRODUCTION
-// CASHFREE_WEBHOOK_SECRET=YOUR_WEBHOOK_SECRET
-
 const cashfreeEnvironment = process.env.CASHFREE_ENV === 'PRODUCTION'
   ? CFEnvironment.PRODUCTION
   : CFEnvironment.SANDBOX;
 
 const cashfree = new Cashfree(
   cashfreeEnvironment,
-  process.env.NEXT_PUBLIC_CASHFREE_APP_ID!,
-  process.env.NEXT_PUBLIC_CASHFREE_SECRET_KEY!
+  process.env.CASHFREE_APP_ID!,
+  process.env.CASHFREE_SECRET_KEY!
 );
 
 export async function POST(request: Request) {

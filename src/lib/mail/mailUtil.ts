@@ -2,6 +2,9 @@ import nodemailer from "nodemailer";
 import 'dotenv/config';
 
 export async function sendMail(mail: string, domain: string, name: string, qrUrl: string) {
+  if (!process.env.SMTP_HOST) {
+    throw new Error("SMTP_HOST is not defined in env");
+  }
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT),

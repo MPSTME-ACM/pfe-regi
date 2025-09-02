@@ -12,8 +12,8 @@ const cashfreeEnvironment = process.env.CASHFREE_ENV === 'PRODUCTION'
 
 const cashfree = new Cashfree(
   cashfreeEnvironment,
-  process.env.NEXT_PUBLIC_CASHFREE_APP_ID!,
-  process.env.NEXT_PUBLIC_CASHFREE_SECRET_KEY!
+  process.env.CASHFREE_APP_ID!,
+  process.env.CASHFREE_SECRET_KEY!
 );
 
 export async function POST(request: Request) {

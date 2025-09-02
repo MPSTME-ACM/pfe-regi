@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     const rawBodyBuffer = await getRawBody(request);
     const rawBody = rawBodyBuffer.toString('utf-8');
     const dataToVerify = `${timestamp}${rawBody}`;
-    const secretKey = process.env.CASHFREE_WEBHOOK_SECRET!;
+    const secretKey = process.env.CASHFREE_SECRET_KEY!;
 
     const expectedSignature = crypto
       .createHmac('sha256', secretKey)
