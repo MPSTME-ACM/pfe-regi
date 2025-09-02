@@ -1,7 +1,25 @@
 import nodemailer from "nodemailer";
 import 'dotenv/config';
 
+const lastSentTimes = new Map();
+
+function canSendEmail(mail: string) {
+  const now = Date.now();
+  if (lastSentTimes.has(mail)) {
+    const lastSent = lastSentTimes.get(mail);
+    if (now - lastSent < 120000) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export async function sendMail(mail: string, domain: string, name: string, qrUrl: string) {
+  if (!canSendEmail(mail)) {
+    console.log(`Skipped sending email to ${mail} - sent within last 2 minutes.`);
+    return;
+  }
+  lastSentTimes.set(mail, Date.now());
   if (!process.env.SMTP_HOST) {
     throw new Error("SMTP_HOST is not defined in env");
   }
@@ -92,5 +110,3 @@ export async function sendMail(mail: string, domain: string, name: string, qrUrl
 
   return info;
 }
-
-sendMail("jainkartik1410@gmail.com", "C", "Kartik Jain", "data:image/png;base64,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")
