@@ -23,7 +23,7 @@ const cashfree = new Cashfree(
 export async function POST(request: Request) {
   try {
     const formData = await request.json();
-    console.log('API Route Received FormData:', formData);
+    // console.log('API Route Received FormData:', formData);
 
     // Uses user's contact number and the current timestamp.
     const orderId = `PFE-${formData.contact}-${Date.now().toString().slice(-4)}`;

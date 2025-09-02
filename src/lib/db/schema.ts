@@ -11,7 +11,9 @@ export const registrations = pgTable('pferegistration', {
   domain: varchar('domain', { length: 100 }).notNull(),
   orderId: varchar('order_id', { length: 256 }).notNull().unique(),
   paymentStatus: text('payment_status', { enum: ['pending', 'success', 'failure'] }).default('pending'),
+  qrCodeUrl: text('qr_code_url'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+  
 },
 (table) => ({
   emailIdx: index('email_idx').on(table.email)

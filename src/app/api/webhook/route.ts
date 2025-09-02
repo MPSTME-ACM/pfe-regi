@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import { db } from '@/lib/db';
 import { registrations } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import qrcode from 'qrcode';
 
 export async function POST(request: Request) {
   try {
@@ -12,41 +13,47 @@ export async function POST(request: Request) {
     const payload = await request.text();
 
     if (!signature || !timestamp || !payload) {
-        return NextResponse.json({ success: false, message: 'Missing webhook headers or payload' }, { status: 400 });
+      return NextResponse.json({ success: false, message: 'Missing webhook headers or payload' }, { status: 400 });
     }
 
     const dataToVerify = `${timestamp}${payload}`;
     const secretKey = process.env.CASHFREE_WEBHOOK_SECRET!;
 
     const expectedSignature = crypto
-        .createHmac('sha256', secretKey)
-        .update(dataToVerify)
-        .digest('base64');
+      .createHmac('sha256', secretKey)
+      .update(dataToVerify)
+      .digest('base64');
 
     const isSignatureValid = (expectedSignature === signature);
 
     const eventData = JSON.parse(payload);
-        const order = eventData.data.order;
-        const payment = eventData.data.payment;
+    const order = eventData.data.order;
+    const payment = eventData.data.payment;
 
-        console.log(`Webhook received for order: ${order.order_id}, Status: ${payment.payment_status}`);
-        console.debug(eventData + "webhook route");
+    // console.log(`Webhook received for order: ${order.order_id}, Status: ${payment.payment_status}`);
+    console.debug(eventData + "webhook route");
 
-        // --- DATABASE INTEGRATION ---
-        // Update the payment status in the database based on the webhook event
-        if (payment.payment_status === "SUCCESS") {
-            await db.update(registrations)
-              .set({ paymentStatus: 'success' })
-              .where(eq(registrations.orderId, order.order_id));
-            console.log(`Database updated for order ${order.order_id}: SUCCESS`);
-        } else if (payment.payment_status === "FAILED" || payment.payment_status === "USER_DROPPED") {
-            await db.update(registrations)
-              .set({ paymentStatus: 'failure' })
-              .where(eq(registrations.orderId, order.order_id));
-            console.log(`Database updated for order ${order.order_id}: FAILURE`);
-        }
+    // --- DATABASE INTEGRATION ---
+    // Update the payment status in the database based on the webhook event
+    if (payment.payment_status === "SUCCESS") {
+      const qrCodeDataUrl = await qrcode.toDataURL(order.order_id);
 
-        return NextResponse.json({ success: true, status: "received" });
+      await db.update(registrations)
+        .set({
+          paymentStatus: 'success',
+          qrCodeUrl: qrCodeDataUrl
+        })
+        .where(eq(registrations.orderId, order.order_id));
+
+      // console.log(`Database updated for order ${order.order_id}: SUCCESS`);
+    } else if (payment.payment_status === "FAILED" || payment.payment_status === "USER_DROPPED") {
+      await db.update(registrations)
+        .set({ paymentStatus: 'failure' })
+        .where(eq(registrations.orderId, order.order_id));
+      // console.log(`Database updated for order ${order.order_id}: FAILURE`);
+    }
+
+    return NextResponse.json({ success: true, status: "received" });
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';

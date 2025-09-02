@@ -3,12 +3,20 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 
+// Define a type for the registration details we expect from the API
+interface RegistrationDetails {
+    name: string;
+    domain: string;
+    orderId: string;
+    qrCodeUrl: string | null;
+}
 
 const StatusDisplay = () => {
     // State to hold the order_id from the URL
     const [order_id, setOrderId] = useState<string | null>(null);
     const [status, setStatus] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
+    const [details, setDetails] = useState<RegistrationDetails | null>(null);
     
     // This effect runs once on the client-side to get the order_id from the URL
     useEffect(() => {
@@ -55,15 +63,15 @@ const StatusDisplay = () => {
         }
         switch (status) {
             case 'Success':
-                console.debug("success payment-status")
                 return (
-                    <>
-                        <h1 className="text-5xl font-bold text-green-400 mb-4">Payment Successful!</h1>
-                        <p className="text-xl text-gray-200">Thank you for registering. Your spot is confirmed.</p>
-                    </>
+                    <div className="text-center">
+                        <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-yellow-400 mx-auto mb-6"></div>
+                        <h1 className="text-4xl font-bold text-yellow-400 mb-4">Payment Pending</h1>
+                        <p className="text-lg text-gray-300">Your payment is being processed. This can take a few moments.</p>
+                        <p className="text-sm text-gray-500 mt-2">We will send a confirmation email once it's successful.</p>
+                    </div>
                 );
             case 'Pending':
-                console.debug("pending payment-status")
                 return (
                     <>
                         {/* New Loading Spinner */}
@@ -76,31 +84,64 @@ const StatusDisplay = () => {
             case 'Failure':
             default:
                 return (
-                    <>
-                        <h1 className="text-5xl font-bold text-red-400 mb-4">Payment Failed</h1>
-                        <p className="text-xl text-gray-200">Unfortunately, your payment could not be processed. Please try again.</p>
-                    </>
+                    <div className="text-center">
+                         <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto mb-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                        </svg>
+                        <h1 className="text-4xl font-bold text-red-500 mb-4">Payment Failed</h1>
+                        <p className="text-lg text-gray-300">Unfortunately, your payment could not be processed. Please try again.</p>
+                    </div>
                 );
         }
+        
     };
 
-    console.debug("payment-status check");
+    if (loading) {
+        return <div className="text-2xl text-gray-400">Verifying Payment...</div>;
+    }
+
+    if (status === 'Success' && details) {
+        return (
+            <div className="w-full max-w-md bg-gray-900/50 backdrop-blur-lg rounded-2xl p-8 border border-pink-500/30 shadow-2xl shadow-pink-500/20 animate-fade-in">
+                <div className="text-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto mb-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <h1 className="text-2xl font-bold text-green-400">Payment Successful!</h1>
+                    <p className="text-gray-300 mt-1">Your ticket is ready.</p>
+                </div>
+                
+                <div className="mt-8 text-center">
+                    {details.qrCodeUrl && (
+                        <img src={details.qrCodeUrl} alt="Your QR Code" className="w-48 h-48 mx-auto rounded-lg bg-white p-2" />
+                    )}
+                </div>
+
+                <div className="mt-8 border-t border-dashed border-gray-600 pt-6 space-y-3 text-center">
+                    <p className="text-2xl font-bold text-white">{details.name}</p>
+                    <p className="text-lg text-pink-400">{details.domain}</p>
+                    <p className="text-xs text-gray-500 tracking-wider font-mono">{details.orderId}</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className="min-h-screen bg-[#0d0d1a] text-white flex flex-col items-center justify-center text-center p-4">
-            {renderStatus()}
-            <Link href="/" className="mt-8 bg-[#e97bfc] text-black font-bold py-3 px-6 rounded-lg text-lg hover:bg-[#f8c8fc] transition-colors duration-300">
+        <div className="text-center">
+            <StatusDisplay />
+            <a href="/" className="mt-8 inline-block bg-gray-700 text-white font-bold py-3 px-6 rounded-lg text-lg hover:bg-gray-600 transition-colors duration-300">
                 Back to Home
-            </Link>
+            </a>
         </div>
     );
 };
 
-// The Suspense wrapper is kept for good practice with client-side data fetching.
 export default function PaymentStatusPage() {
-    console.debug("payment-status check");
     return (
-        <Suspense fallback={<div className="min-h-screen bg-[#0d0d1a] text-white flex items-center justify-center">Loading...</div>}>
-            <StatusDisplay />
-        </Suspense>
+        <div className="min-h-screen bg-[#0d0d1a] text-white flex flex-col items-center justify-center p-4">
+            <Suspense fallback={<div className="text-2xl text-gray-400">Loading Page...</div>}>
+                <StatusDisplay />
+            </Suspense>
+        </div>
     );
 }
