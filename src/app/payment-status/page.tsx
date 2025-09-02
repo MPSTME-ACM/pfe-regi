@@ -2,6 +2,7 @@
 "use client";
 import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 // Define a type for the registration details we expect from the API
 interface RegistrationDetails {
@@ -68,7 +69,7 @@ const StatusDisplay = () => {
                         <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-yellow-400 mx-auto mb-6"></div>
                         <h1 className="text-4xl font-bold text-yellow-400 mb-4">Payment Pending</h1>
                         <p className="text-lg text-gray-300">Your payment is being processed. This can take a few moments.</p>
-                        <p className="text-sm text-gray-500 mt-2">We will send a confirmation email once it's successful.</p>
+                        <p className="text-sm text-gray-500 mt-2">We will send a confirmation email once it&apos;s successful.</p>
                     </div>
                 );
             case 'Pending':
@@ -113,7 +114,7 @@ const StatusDisplay = () => {
                 
                 <div className="mt-8 text-center">
                     {details.qrCodeUrl && (
-                        <img src={details.qrCodeUrl} alt="Your QR Code" className="w-48 h-48 mx-auto rounded-lg bg-white p-2" />
+                        <Image src={details.qrCodeUrl} alt="Your QR Code" className="w-48 h-48 mx-auto rounded-lg bg-white p-2" />
                     )}
                 </div>
 
@@ -129,9 +130,9 @@ const StatusDisplay = () => {
     return (
         <div className="text-center">
             <StatusDisplay />
-            <a href="/" className="mt-8 inline-block bg-gray-700 text-white font-bold py-3 px-6 rounded-lg text-lg hover:bg-gray-600 transition-colors duration-300">
+            <Link href="/" className="mt-8 inline-block bg-gray-700 text-white font-bold py-3 px-6 rounded-lg text-lg hover:bg-gray-600 transition-colors duration-300">
                 Back to Home
-            </a>
+            </Link>
         </div>
     );
 };
