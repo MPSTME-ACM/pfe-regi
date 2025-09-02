@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { json } from 'stream/consumers';
 import { redirect } from 'next/dist/server/api-utils';
 import { useRouter } from 'next/navigation';
+import { error } from 'console';
 
 interface CheckoutResult {
   error?: { message: string; code: string; };
@@ -160,13 +161,14 @@ interface InputFieldProps {
   label: string;
   type: string;
   placeholder: string;
+  error?: string;
   name: string;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   required?: boolean;
 }
 
-const InputField: React.FC<InputFieldProps> = ({ label, type, placeholder, name, value, onChange, required = false }) => {
+const InputField: React.FC<InputFieldProps> = ({ label, type, placeholder, name, value, onChange, required = false, error }) => {
   return (
     <div className="mb-6">
       <label htmlFor={name} className="block text-sm font-medium text-gray-300 mb-2">
@@ -182,6 +184,8 @@ const InputField: React.FC<InputFieldProps> = ({ label, type, placeholder, name,
         required={required}
         className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#f8c8fc] transition-all duration-300"
       />
+
+      {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
     </div>
   );
 };
@@ -245,8 +249,9 @@ interface RegistrationFormProps {
   formData: Record<string, string>;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   domainCounts: Record<string, number>;
+  errors: { email: string; contact: string };
 }
-const RegistrationForm: React.FC<RegistrationFormProps> = ({ formData, handleInputChange, domainCounts }) => {
+const RegistrationForm: React.FC<RegistrationFormProps> = ({ formData, handleInputChange, domainCounts, errors }) => {
   const domains = ['C', 'Python', 'Web', 'DSA', 'AIML'];
   const years = ['First Year', 'Second Year', 'Third Year', 'Fourth Year', 'Fifth Year'];
   const courses = ['BTI', 'BTech', 'MBA Tech'];
@@ -258,8 +263,8 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ formData, handleInp
   return (
     <div>
       <InputField label="Your Name" type="text" placeholder="Enter your full name" name="name" value={formData.name} onChange={handleInputChange} required />
-      <InputField label="Your Email" type="email" placeholder="youremail@domain.com" name="email" value={formData.email} onChange={handleInputChange} required />
-      <InputField label="Contact Number" type="tel" placeholder="9876543210" name="contact" value={formData.contact} onChange={handleInputChange} required />
+      <InputField label="Your Email" type="email" placeholder="youremail@domain.com" name="email" value={formData.email} onChange={handleInputChange} required error={errors.email} />
+      <InputField label="Contact Number" type="tel" placeholder="9876543210" name="contact" value={formData.contact} onChange={handleInputChange} required error={errors.contact}/>
       <SelectField label="Course" name="course" options={courses} value={formData.course} onChange={handleInputChange} required />
       <SelectField label="Department" name="department" options={departments} value={formData.department} onChange={handleInputChange} required />
       <SelectField label="Current Academic Year" name="year" options={years} value={formData.year} onChange={handleInputChange} required />
@@ -289,6 +294,7 @@ export default function Home() {
   const [merchantName, setMerchantName] = useState('');
   const [merchantEmail, setMerchantEmail] = useState('');
   const [domainCounts, setDomainCounts] = useState<Record<string, number>>({});
+  const [formErrors, setFormErrors] = useState({ email: '', contact: '' });
 
   useEffect(() => {
     setMerchantName(process.env.NEXT_PUBLIC_MERCHANT_NAME || 'ACM MPSTME');
@@ -317,10 +323,33 @@ export default function Home() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    if (name === 'email' || name === 'contact') {
+            setFormErrors(prev => ({ ...prev, [name]: '' }));
+        }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const contactRegex = /^[6-9]\d{9}$/;
+        let errors = { email: '', contact: '' };
+        let isValid = true;
+
+        if (!emailRegex.test(formData.email)) {
+            errors.email = 'Please enter a valid email address.';
+            isValid = false;
+        }
+        if (!contactRegex.test(formData.contact)) {
+            errors.contact = 'Please enter a valid 10-digit mobile number.';
+            isValid = false;
+        }
+
+        setFormErrors(errors);
+        if (!isValid) return; // Stop submission if there are errors
+
+        setIsLoading(true);
+
     if (!cashfree) {
       console.error("Cashfree SDK not initialized yet.");
       return;
@@ -447,7 +476,7 @@ export default function Home() {
             <Header />
             {!paymentSessionId ? (
               <form onSubmit={handleSubmit}>
-                <RegistrationForm formData={formData} handleInputChange={handleInputChange} domainCounts={domainCounts} />
+                <RegistrationForm formData={formData} handleInputChange={handleInputChange} domainCounts={domainCounts} errors={formErrors}/>
                 <div className="mt-10 text-center">
                   <div className="">
                     <p className="mb-2 text-2xl font-bold text-white">Ticket Price: ₹100</p>

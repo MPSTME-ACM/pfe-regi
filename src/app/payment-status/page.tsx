@@ -97,9 +97,9 @@ const StatusDisplay = () => {
                                             <Image
                                                 src={details.qrCodeUrl}
                                                 alt="Registration QR Code"
-                                                width={180}
-                                                height={180}
-                                                className="bg-white p-1 rounded-lg w-32 h-32"
+                                                width={256}
+                                                height={256}
+                                                className="bg-white p-1 rounded-lg w-36 h-36"
                                             />
                                         )}
                                     </div>
@@ -115,12 +115,14 @@ const StatusDisplay = () => {
                             </div>
                         </div>
 
-                        <button
-                            onClick={handleDownload}
-                            className="mt-8 bg-[#e97bfc] text-black font-bold py-3 px-6 rounded-lg text-lg transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-2xl hover:shadow-[#e97bfc]/50 active:scale-95"
-                        >
-                            Download Ticket 📎
-                        </button>
+                        <div className="w-full text-center">
+                            <button
+                                onClick={handleDownload}
+                                className="mt-8 text-center text-[#e97bfc] font-bold py-3 px-8 rounded-lg border-2 border-[#e97bfc] transition-all duration-300 ease-in-out transform hover:bg-[#e97bfc]/10 hover:shadow-lg hover:shadow-[#e97bfc]/20 active:scale-95"
+                            >
+                                Download Ticket
+                            </button>
+                        </div>
 
                         <p className="text-xs text-gray-500 mt-6 text-center">A confirmation email with your ticket will be sent to your registered email address.</p>
 

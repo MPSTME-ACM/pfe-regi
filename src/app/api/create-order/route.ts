@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     // console.log('API Route Received FormData:', formData);
 
     // Uses user's contact number and the current timestamp.
-    const orderId = `PFE-${formData.contact}-${Date.now().toString().slice(-4)}`;
+    const orderId = `${formData.name.slice(0, 2).toUpperCase()}${formData.contact.slice(-4)}${formData.domain.charAt(0).toUpperCase()}`;
 
     await db.insert(registrations).values({
         name: formData.name,

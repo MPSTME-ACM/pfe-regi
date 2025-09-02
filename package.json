@@ -15,6 +15,7 @@
     "drizzle-kit": "^0.31.4",
     "drizzle-orm": "^0.44.5",
     "html-to-image": "^1.11.13",
+    "html5-qrcode": "^2.3.8",
     "next": "15.5.2",
     "pg-core": "^0.1.15",
     "qrcode": "^1.5.4",
