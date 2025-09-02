@@ -25,6 +25,7 @@ const StatusDisplay = () => {
   const [details, setDetails] = useState<RegistrationDetails | null>(null);
   const [hasRetried, setHasRetried] = useState(false);
   const ticketRef = useRef<HTMLDivElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
   const fetchStatus = async (orderId: string) => {
     try {
@@ -60,19 +61,45 @@ const StatusDisplay = () => {
       return;
     }
 
-    // First fetch
     fetchStatus(orderId);
+  }, []);
 
-    // After first fetch, if no QR code, wait 5 sec and retry once
-    const retryTimeout = setTimeout(() => {
-      if (details && !details.qrCodeUrl && !hasRetried) {
-        setHasRetried(true);
-        fetchStatus(orderId);
-      }
-    }, 3000);
+  // Retry fetching after 3 seconds if no QR code and not retried yet
+  useEffect(() => {
+    if (details && !details.qrCodeUrl && !hasRetried && status === "Success") {
+      const retryTimeout = setTimeout(() => {
+        const params = new URLSearchParams(window.location.search);
+        const orderId = params.get("order_id");
+        if (orderId) {
+          setHasRetried(true);
+          fetchStatus(orderId);
+        }
+      }, 3000);
+      return () => clearTimeout(retryTimeout);
+    }
+  }, [details, hasRetried, status]);
 
-    return () => clearTimeout(retryTimeout);
-  }, [details, hasRetried]);
+  const handleDownload = () => {
+    if (wrapperRef.current && details) {
+      toJpeg(wrapperRef.current, {
+        cacheBust: true,
+        backgroundColor: "#0d0d1a",
+        quality: 1.0,
+        pixelRatio: window.devicePixelRatio || 3,
+      })
+        .then((dataUrl) => {
+          const link = document.createElement("a");
+          const fileName = `${details.name.replace(/\s+/g, "_")}-PFE-Ticket.jpeg`;
+          link.download = fileName;
+          link.href = dataUrl;
+          link.click();
+        })
+        .catch((err) => {
+          console.error("Failed to generate ticket image:", err);
+          alert("Oops! Could not download the ticket. Please try taking a screenshot.");
+        });
+    }
+  };
 
   const renderStatus = () => {
     if (loading) {
@@ -102,7 +129,10 @@ const StatusDisplay = () => {
         }
 
         return (
-          <div className="w-full max-w-md sm:max-w-lg animate-fade-in">
+          <div
+            ref={wrapperRef}
+            className="w-full max-w-md sm:max-w-lg animate-fade-in flex flex-col items-center"
+          >
             <div className="text-center mb-8">
               <h1 className="text-3xl sm:text-4xl font-bold text-white">Payment Successful!</h1>
               <p className="text-gray-400 mt-2">Your Event Pass is ready.</p>
@@ -110,7 +140,8 @@ const StatusDisplay = () => {
 
             <div
               ref={ticketRef}
-              className="relative bg-black/50 backdrop-blur-md rounded-2xl border border-pink-500/30 shadow-2xl shadow-pink-500/20 p-1 progress-glow-container"
+              className="relative bg-black/50 backdrop-blur-md rounded-2xl border border-pink-500/30 shadow-2xl shadow-pink-500/20 p-1 progress-glow-container w-full"
+              style={{ maxWidth: "500px" }}
             >
               <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-[#0d0d1a] rounded-full"></div>
               <div className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-[#0d0d1a] rounded-full"></div>
@@ -141,20 +172,19 @@ const StatusDisplay = () => {
               </div>
             </div>
 
-            <div className="w-full text-center">
-              <button
-                onClick={handleDownload}
-                className="mt-8 text-center text-[#e97bfc] font-bold py-3 px-8 rounded-lg border-2 border-[#e97bfc] transition-all duration-300 ease-in-out transform hover:bg-[#e97bfc]/10 hover:shadow-lg hover:shadow-[#e97bfc]/20 active:scale-95"
-              >
-                Download Ticket
-              </button>
-            </div>
+            <button
+              onClick={handleDownload}
+              className="mt-8 text-center text-[#e97bfc] font-bold py-3 px-8 rounded-lg border-2 border-[#e97bfc] transition-all duration-300 ease-in-out transform hover:bg-[#e97bfc]/10 hover:shadow-lg hover:shadow-[#e97bfc]/20 active:scale-95"
+            >
+              Download Ticket
+            </button>
 
-            <p className="text-s text-gray-500 mt-6 text-center">
+            <p className="text-s text-gray-500 mt-6 text-center max-w-sm">
               A confirmation email with your ticket will be sent to your registered email address, also keep an eye on the spam folder.
             </p>
           </div>
         );
+
       case "Pending":
         return (
           <div className="w-full max-w-md text-center">
@@ -164,6 +194,7 @@ const StatusDisplay = () => {
             <p className="text-sm text-gray-500 mt-2">We will send a confirmation email once it&apos;s successful.</p>
           </div>
         );
+
       case "Failure":
       default:
         return (
@@ -192,30 +223,6 @@ const StatusDisplay = () => {
             </Link>
           </div>
         );
-    }
-  };
-
-  const handleDownload = () => {
-    if (ticketRef.current && details) {
-      toJpeg(ticketRef.current, {
-        cacheBust: true,
-        backgroundColor: "#0d0d1a",
-        quality: 1.0,
-        pixelRatio: window.devicePixelRatio || 3,
-        width: ticketRef.current.offsetWidth * 2,
-        height: ticketRef.current.offsetHeight * 2,
-      })
-        .then((dataUrl) => {
-          const link = document.createElement("a");
-          const fileName = `${details.name.replace(/\s+/g, "_")}-PFE-Ticket.jpeg`;
-          link.download = fileName;
-          link.href = dataUrl;
-          link.click();
-        })
-        .catch((err) => {
-          console.error("Failed to generate ticket image:", err);
-          alert("Oops! Could not download the ticket. Please try taking a screenshot.");
-        });
     }
   };
 
