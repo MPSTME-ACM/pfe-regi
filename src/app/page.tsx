@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 interface CheckoutResult {
@@ -146,12 +147,26 @@ interface CashfreeSDK {
 const Header = () => {
   return (
     <header className="text-center mb-10">
-      <h1 className="text-4xl font-extrabold text-white mb-2">
+      {/* <h1 className="text-4xl font-extrabold text-white mb-2">
         Programming For Everyone
-      </h1>
-      <p className="text-xl text-gray-300">
-        A 3-day workshop by <span className="font-semibold text-[#d358f2]">ACM MPSTME</span>
-      </p>
+      </h1> */}
+      <div className="flex items-center justify-center">
+        <Image
+          src={"/pfelogo.png"}
+          alt="Registration QR Code"
+          width={1235}
+          height={727}
+          className="p-1 rounded-lg w-74"
+        />
+      </div>
+      <div className="max-w-full text-center px-4">
+        <p className="text-xl text-gray-300">
+          A 3-day workshop by{" "}
+          <span className="whitespace-nowrap font-semibold text-[#f8c8fc]">
+            ACM MPSTME
+          </span>
+        </p>
+      </div>
       <p className="text-md text-gray-500 mt-2">
         September 16th - 18th, 2025
       </p>
@@ -185,7 +200,7 @@ const InputField: React.FC<InputFieldProps> = ({ label, type, placeholder, name,
         onChange={onChange}
         placeholder={placeholder}
         required={required}
-        className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#f8c8fc] transition-all duration-300"
+        className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#f8c8fc] transition-all duration-300 autofill:!bg-white/5"
       />
       {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
     </div>
@@ -312,16 +327,17 @@ export default function Home() {
   useEffect(() => {
     const initializeSDK = async () => {
       const { load } = await import("@cashfreepayments/cashfree-js");
-      const cf = await load({ mode: "production" }); // use 'sandbox' for dev
+      const cf = await load({ mode: "sandbox" }); // use 'sandbox' for dev
       setCashfree(cf);
     };
     initializeSDK();
   }, []);
 
-  const totalFields = Object.keys(formData).length;
+  const totalFields = Object.keys(formData).length - 1;
 
   useEffect(() => {
-    const filledFields = Object.values(formData).filter(value => value !== '').length;
+    const { referral, ...requiredFields } = formData;
+    const filledFields = Object.values(requiredFields).filter(value => value !== '').length;
     setProgress((filledFields / totalFields) * 100);
   }, [formData, totalFields]);
 
@@ -390,12 +406,12 @@ export default function Home() {
   };
 
   useEffect(() => {
-      if (paymentSessionId && cashfree) {
-        const checkoutOptions = {
-          paymentSessionId: paymentSessionId,
-          redirectTarget: "_modal", // Use "_self" to render in the same container
-        };
-      
+    if (paymentSessionId && cashfree) {
+      const checkoutOptions = {
+        paymentSessionId: paymentSessionId,
+        redirectTarget: "_modal", // Use "_self" to render in the same container
+      };
+
 
       cashfree.checkout(checkoutOptions).then((result: CheckoutResult) => {
         if (result.paymentDetails || result.error) {
@@ -455,7 +471,7 @@ export default function Home() {
         }
       `}</style>
       <main className="min-h-screen text-white font-sans flex items-center justify-center p-4 sm:p-6 md:p-8">
-        <div className="w-full max-w-3xl bg-black/50 backdrop-blur-md rounded-2xl border border-white/10 progress-glow-container">
+        <div className="w-full max-w-3xl bg-black/30 backdrop-blur-md rounded-2xl border border-white/10 progress-glow-container">
           <div className="p-8 sm:p-10 md:p-12">
             <Header />
             {!paymentSessionId ? (
@@ -487,7 +503,7 @@ export default function Home() {
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full max-w-xs mx-auto bg-[#e97bfc] text-black font-bold py-3 px-6 rounded-lg text-lg transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-2xl hover:shadow-[#e97bfc]/50 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full max-w-xs mx-auto bg-[#e97bfc] text-white font-bold py-3 px-6 rounded-lg text-lg transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-2xl hover:shadow-[#e97bfc]/50 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isLoading ? 'Processing...' : 'Proceed to Pay'}
                   </button>
