@@ -90,10 +90,13 @@ const SyncButton = () => {
       } else {
         alert(`${data.message || 'Data synced successfully!'}`);
       }
-    } catch (error: any) {
-      alert('Sync failed: ' + error?.message || error);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        alert('Sync failed: ' + error.message);
+      } else {
+        alert('Sync failed: ' + String(error));
+      }
     }
-
     setIsLoading(false);
   };
 

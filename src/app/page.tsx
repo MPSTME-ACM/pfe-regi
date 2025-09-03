@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -21,125 +21,126 @@ interface CashfreeSDK {
 }
 
 // Component: ParticleBackground
-const ParticleBackground = () => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+// import {useRef} from 'react';
+// const ParticleBackground = () => {
+//   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+//   useEffect(() => {
+//     const canvas = canvasRef.current;
+//     if (!canvas) return;
+//     const ctx = canvas.getContext('2d');
+//     if (!ctx) return;
 
-    let animationFrameId: number;
-    const characters = 'ACM MPSTME PFE PYTHON WEBDEV DSA AIML WORKSHOP CODING 2025';
-    const fontSize = 16;
+//     let animationFrameId: number;
+//     const characters = 'ACM MPSTME PFE PYTHON WEBDEV DSA AIML WORKSHOP CODING 2025';
+//     const fontSize = 16;
 
-    let columns: number;
-    let drops: { y: number; char: string }[];
-    let content: { text: string; y: number }[];
+//     let columns: number;
+//     let drops: { y: number; char: string }[];
+//     let content: { text: string; y: number }[];
 
-    const draw = () => {
-      if (!ctx || !canvas || !drops) return;
+//     const draw = () => {
+//       if (!ctx || !canvas || !drops) return;
 
-      ctx.fillStyle = 'rgba(13, 13, 26, 0.1)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+//       ctx.fillStyle = 'rgba(13, 13, 26, 0.1)';
+//       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      ctx.fillStyle = '#e97bfc';
-      ctx.font = `${fontSize}px monospace`;
+//       ctx.fillStyle = '#e97bfc';
+//       ctx.font = `${fontSize}px monospace`;
 
-      for (let i = 0; i < columns; i++) {
-        const drop = drops[i];
-        if (drop) {
-          ctx.fillText(drop.char, i * fontSize, drop.y * fontSize);
-        }
-      }
-    };
+//       for (let i = 0; i < columns; i++) {
+//         const drop = drops[i];
+//         if (drop) {
+//           ctx.fillText(drop.char, i * fontSize, drop.y * fontSize);
+//         }
+//       }
+//     };
 
-    const initialize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      columns = Math.floor(canvas.width / fontSize);
-      drops = [];
-      for (let i = 0; i < columns; i++) {
-        drops[i] = {
-          y: Math.floor(Math.random() * (canvas.height / fontSize)),
-          char: characters.charAt(Math.floor(Math.random() * characters.length)),
-        };
-      }
-      content = [
-        { text: 'ACM MPSTME', y: canvas.height * 0.3 },
-        { text: 'PYTHON WORKSHOP 2025', y: canvas.height * 0.5 },
-        { text: 'CODING WEBDEV DSA AIML', y: canvas.height * 0.7 },
-      ];
+//     const initialize = () => {
+//       canvas.width = window.innerWidth;
+//       canvas.height = window.innerHeight;
+//       columns = Math.floor(canvas.width / fontSize);
+//       drops = [];
+//       for (let i = 0; i < columns; i++) {
+//         drops[i] = {
+//           y: Math.floor(Math.random() * (canvas.height / fontSize)),
+//           char: characters.charAt(Math.floor(Math.random() * characters.length)),
+//         };
+//       }
+//       content = [
+//         { text: 'ACM MPSTME', y: canvas.height * 0.3 },
+//         { text: 'PYTHON WORKSHOP 2025', y: canvas.height * 0.5 },
+//         { text: 'CODING WEBDEV DSA AIML', y: canvas.height * 0.7 },
+//       ];
 
-      draw();
-    };
+//       draw();
+//     };
 
-    let resizeTimeout: NodeJS.Timeout;
-    const handleResize = () => {
-      clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(() => {
-        initialize();
-      }, 250);
-    };
+//     let resizeTimeout: NodeJS.Timeout;
+//     const handleResize = () => {
+//       clearTimeout(resizeTimeout);
+//       resizeTimeout = setTimeout(() => {
+//         initialize();
+//       }, 250);
+//     };
 
-    let frameCount = 0;
-    const speedInterval = 5;
+//     let frameCount = 0;
+//     const speedInterval = 5;
 
-    const update = () => {
-      for (let i = 0; i < columns; i++) {
-        const drop = drops[i];
-        if (!drop) continue;
+//     const update = () => {
+//       for (let i = 0; i < columns; i++) {
+//         const drop = drops[i];
+//         if (!drop) continue;
 
-        if (drop.y * fontSize > canvas.height && Math.random() > 0.995) {
-          drop.y = 0;
-        } else {
-          drop.y++;
-        }
+//         if (drop.y * fontSize > canvas.height && Math.random() > 0.995) {
+//           drop.y = 0;
+//         } else {
+//           drop.y++;
+//         }
 
-        const nextYPos = drop.y * fontSize;
-        let nextChar = characters.charAt(Math.floor(Math.random() * characters.length));
+//         const nextYPos = drop.y * fontSize;
+//         let nextChar = characters.charAt(Math.floor(Math.random() * characters.length));
 
-        for (const line of content) {
-          const sentenceY = line.y;
-          const sentenceText = line.text;
-          const revealRange = fontSize;
-          const textStartIndex = Math.floor((columns - sentenceText.length) / 2);
-          const textEndIndex = textStartIndex + sentenceText.length;
-          const charIndexInSentence = i - textStartIndex;
+//         for (const line of content) {
+//           const sentenceY = line.y;
+//           const sentenceText = line.text;
+//           const revealRange = fontSize;
+//           const textStartIndex = Math.floor((columns - sentenceText.length) / 2);
+//           const textEndIndex = textStartIndex + sentenceText.length;
+//           const charIndexInSentence = i - textStartIndex;
 
-          if (i >= textStartIndex && i < textEndIndex) {
-            if (nextYPos > sentenceY && nextYPos < sentenceY + revealRange) {
-              nextChar = sentenceText.charAt(charIndexInSentence);
-            }
-          }
-        }
-        drop.char = nextChar;
-      }
-    };
+//           if (i >= textStartIndex && i < textEndIndex) {
+//             if (nextYPos > sentenceY && nextYPos < sentenceY + revealRange) {
+//               nextChar = sentenceText.charAt(charIndexInSentence);
+//             }
+//           }
+//         }
+//         drop.char = nextChar;
+//       }
+//     };
 
-    const animate = () => {
-      draw();
-      if (frameCount % speedInterval === 0) {
-        update();
-      }
-      frameCount++;
-      animationFrameId = window.requestAnimationFrame(animate);
-    };
+//     const animate = () => {
+//       draw();
+//       if (frameCount % speedInterval === 0) {
+//         update();
+//       }
+//       frameCount++;
+//       animationFrameId = window.requestAnimationFrame(animate);
+//     };
 
-    window.addEventListener('resize', handleResize);
-    initialize();
-    animate();
+//     window.addEventListener('resize', handleResize);
+//     initialize();
+//     animate();
 
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      window.cancelAnimationFrame(animationFrameId);
-      clearTimeout(resizeTimeout);
-    };
-  }, []);
+//     return () => {
+//       window.removeEventListener('resize', handleResize);
+//       window.cancelAnimationFrame(animationFrameId);
+//       clearTimeout(resizeTimeout);
+//     };
+//   }, []);
 
-  return <canvas ref={canvasRef} style={{ position: 'fixed', top: 0, left: 0, zIndex: -1, width: '100vw', height: '100vh' }} />;
-};
+//   return <canvas ref={canvasRef} style={{ position: 'fixed', top: 0, left: 0, zIndex: -1, width: '100vw', height: '100vh' }} />;
+// };
 
 // Component: Header
 const Header = () => {

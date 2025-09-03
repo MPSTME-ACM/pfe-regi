@@ -338,6 +338,7 @@ const VerifyPageContent = () => {
 
   // FIX: Explicitly type the error message parameter as a string
   const onScanError = (errorMessage: string) => {
+    console.error(errorMessage);
     // This callback is required but we can choose to ignore minor errors.
   }
 
