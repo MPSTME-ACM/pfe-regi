@@ -36,10 +36,8 @@ export async function POST(request: Request) {
       if (successTx) {
         orderStatus = "Success";
         const result = await db.select().from(registrations).where(eq(registrations.orderId, order_id));
-        console.log('Database result:', result);
         if (result.length > 0) {
           const dbRecord = result[0];
-          console.log('Raw DB record:', dbRecord);
           registrationDetails = {
             name: dbRecord.name,
             domain: dbRecord.domain,

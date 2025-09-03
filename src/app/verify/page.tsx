@@ -290,11 +290,24 @@ const VerifyPageContent = () => {
     }
   }, [])
 
-  const handleLogin = (user: string, pass: string) => {
-    const creds = `Basic ${btoa(`${user}:${pass}`)}`
-    sessionStorage.setItem("admin-creds", creds)
-    setAuthCreds(creds)
-  }
+  const handleLogin = async (user: string, pass: string) => {
+    const creds = `Basic ${btoa(`${user}:${pass}`)}`;
+
+    try {
+      const res = await fetch('/api/login', {
+        headers: { Authorization: creds },
+      });
+      if (!res.ok) {
+        setError('Invalid username or password');
+        return;
+      }
+      setError('');
+      sessionStorage.setItem('admin-creds', creds);
+      setAuthCreds(creds);
+    } catch {
+      setError('Network error during authentication');
+    }
+  };
 
   const handleLogout = () => {
     sessionStorage.removeItem("admin-creds")

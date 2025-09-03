@@ -17,7 +17,6 @@ function canSendEmail(mail: string) {
 
 export async function sendMail(mail: string, domain: string, name: string, qrUrl: string) {
   if (!canSendEmail(mail)) {
-    console.log(`Skipped sending email to ${mail} - sent within last 2 minutes.`);
     return;
   }
   lastSentTimes.set(mail, Date.now());

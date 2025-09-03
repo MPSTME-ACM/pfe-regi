@@ -97,7 +97,6 @@ export async function POST(request: Request) {
       const updateResult = await db.update(registrations)
         .set({ paymentStatus: 'failure' })
         .where(eq(registrations.orderId, order.order_id));
-      // console.log(`Database updated for order ${order.order_id}: FAILURE`);
     }
 
     return NextResponse.json({ success: true, status: "received" });
