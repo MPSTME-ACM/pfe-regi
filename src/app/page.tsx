@@ -12,8 +12,8 @@ interface CheckoutResult {
 interface CheckoutOptions {
   paymentSessionId: string;
   redirectTarget: string;
-  appearance?: any;
-  style?: any;
+  // appearance?: any;
+  // style?: any;
 }
 
 interface CashfreeSDK {
@@ -389,44 +389,12 @@ export default function Home() {
   };
 
   useEffect(() => {
-    if (paymentSessionId && cashfree) {
-      const checkoutOptions: CheckoutOptions = {
-        paymentSessionId: paymentSessionId,
-        redirectTarget: "_modal",
-        appearance: {
-          theme: 'dark',
-          variables: {
-            colorPrimary: '#e97bfc',
-            colorBackground: '#000000',
-            colorText: '#ffffff',
-            colorTextSecondary: '#e97bfc',
-            fontFamily: 'inherit',
-            borderRadius: '8px'
-          }
-        },
-        style: {
-          base: {
-            color: '#ffffff',
-            backgroundColor: '#000000',
-            fontSize: '16px',
-            fontFamily: 'inherit',
-            '::placeholder': {
-              color: '#e97bfc'
-            }
-          },
-          focus: {
-            color: '#e97bfc',
-            borderColor: '#e97bfc'
-          },
-          invalid: {
-            color: '#ff3333',
-            borderColor: '#ff3333'
-          },
-          complete: {
-            color: '#7A9B76'
-          }
-        }
-      };
+      if (paymentSessionId && cashfree) {
+        const checkoutOptions = {
+          paymentSessionId: paymentSessionId,
+          redirectTarget: "_modal", // Use "_self" to render in the same container
+        };
+      
 
       cashfree.checkout(checkoutOptions).then((result: CheckoutResult) => {
         if (result.paymentDetails || result.error) {
@@ -450,6 +418,7 @@ export default function Home() {
     const fetchDomainStatus = async () => {
       try {
         const response = await fetch('/api/domain-count');
+        const data = await response.json();
         if (data.success && data.registrationAllowed) {
           setDomainStatus(data.registrationAllowed as Record<string, boolean>);
         }
