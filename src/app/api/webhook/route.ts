@@ -84,13 +84,14 @@ export async function POST(request: Request) {
           D: 'DSA',
           A: 'AIML'
         } as const;
+        const order_id = order.order_id;
         const domainChar = order.order_id.toString().slice(-1) as keyof typeof allowedDomains;
         const domain = allowedDomains[domainChar];
 
         const mail = customer_details.customer_email;
         const name = customer_details.customer_name;
 
-        sendMail(mail, domain, name, qrCodeDataUrl);
+        sendMail(mail, domain, name, qrCodeDataUrl, order_id);
 
       // console.log(`Database updated for order ${order.order_id}: SUCCESS`);
     } else if (payment.payment_status === "FAILED" || payment.payment_status === "USER_DROPPED") {
