@@ -7,10 +7,11 @@ function canSendEmail(mail: string) {
   const now = Date.now();
   if (lastSentTimes.has(mail)) {
     const lastSent = lastSentTimes.get(mail);
-    if (now - lastSent < 120000) {
+    if (now - lastSent < 180000) {
       return false;
     }
   }
+  setTimeout(() => lastSentTimes.delete(mail), 180000);
   return true;
 }
 

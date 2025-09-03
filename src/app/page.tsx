@@ -1,20 +1,23 @@
-
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { json } from 'stream/consumers';
-import { redirect } from 'next/dist/server/api-utils';
 import { useRouter } from 'next/navigation';
-import { error } from 'console';
 
 interface CheckoutResult {
-  error?: { message: string; code: string; };
+  error?: { message: string; code: string };
   redirect?: boolean;
-  paymentDetails?: { paymentMessage: string; };
+  paymentDetails?: { paymentMessage: string };
+}
+
+interface CheckoutOptions {
+  paymentSessionId: string;
+  redirectTarget: string;
+  appearance?: any;
+  style?: any;
 }
 
 interface CashfreeSDK {
-  checkout(options: { paymentSessionId: string; redirectTarget: string; }): Promise<CheckoutResult>;
+  checkout(options: CheckoutOptions): Promise<CheckoutResult>;
 }
 
 // Component: ParticleBackground
@@ -138,7 +141,6 @@ const ParticleBackground = () => {
   return <canvas ref={canvasRef} style={{ position: 'fixed', top: 0, left: 0, zIndex: -1, width: '100vw', height: '100vh' }} />;
 };
 
-
 // Component: Header
 const Header = () => {
   return (
@@ -184,13 +186,12 @@ const InputField: React.FC<InputFieldProps> = ({ label, type, placeholder, name,
         required={required}
         className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#f8c8fc] transition-all duration-300"
       />
-
       {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
     </div>
   );
 };
 
-// Component: SelectField
+// Component: SelectField (inline)
 interface SelectFieldProps {
   label: string;
   name: string;
@@ -198,10 +199,10 @@ interface SelectFieldProps {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   required?: boolean;
-  domainCounts?: Record<string, number>;
+  domainStatus?: Record<string, boolean>; // <-- booleans from /api/domain-status
 }
 
-const SelectField: React.FC<SelectFieldProps> = ({ label, name, options, value, onChange, required = false, domainCounts }) => {
+const SelectField: React.FC<SelectFieldProps> = ({ label, name, options, value, onChange, required = false, domainStatus }) => {
   return (
     <div className="mb-6">
       <label htmlFor={name} className="block text-sm font-medium text-gray-300 mb-2">
@@ -224,30 +225,21 @@ const SelectField: React.FC<SelectFieldProps> = ({ label, name, options, value, 
       >
         <option value="" disabled>Select your option</option>
         {options.map((option) => {
-          // Only apply domain logic for the 'domain' field
-          if (name === 'domain' && domainCounts) {
-            const count = domainCounts[option] || 0;
-            const isFull = count >= 60;
-
+          if (name === 'domain' && domainStatus) {
+            const isAllowed = domainStatus[option] ?? true;
             return (
               <option
                 key={option}
                 value={option}
-                disabled={isFull}
+                disabled={!isAllowed}
                 className="bg-[#1a0d1f] text-white disabled:text-gray-500"
               >
-                {option} {isFull ? '(Full)' : `(${60 - count} seats left)`}
+                {option} {!isAllowed ? '(Full)' : ''}
               </option>
             );
           }
-
-          // For other selects, just show the option
           return (
-            <option
-              key={option}
-              value={option}
-              className="bg-[#1a0d1f] text-white"
-            >
+            <option key={option} value={option} className="bg-[#1a0d1f] text-white">
               {option}
             </option>
           );
@@ -261,10 +253,11 @@ const SelectField: React.FC<SelectFieldProps> = ({ label, name, options, value, 
 interface RegistrationFormProps {
   formData: Record<string, string>;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
-  domainCounts: Record<string, number>;
+  domainStatus: Record<string, boolean>;
   errors: { email: string; contact: string };
 }
-const RegistrationForm: React.FC<RegistrationFormProps> = ({ formData, handleInputChange, domainCounts, errors }) => {
+
+const RegistrationForm: React.FC<RegistrationFormProps> = ({ formData, handleInputChange, domainStatus, errors }) => {
   const domains = ['C', 'Python', 'Web', 'DSA', 'AIML'];
   const years = ['First Year', 'Second Year', 'Third Year', 'Fourth Year', 'Fifth Year'];
   const courses = ['BTI', 'BTech', 'MBA Tech'];
@@ -281,17 +274,11 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ formData, handleInp
       <SelectField label="Course" name="course" options={courses} value={formData.course} onChange={handleInputChange} required />
       <SelectField label="Department" name="department" options={departments} value={formData.department} onChange={handleInputChange} required />
       <SelectField label="Current Academic Year" name="year" options={years} value={formData.year} onChange={handleInputChange} required />
-      <SelectField label="Choose one domain to participate in" name="domain" options={domains} value={formData.domain} onChange={handleInputChange} required domainCounts={domainCounts} />
-      <InputField label="Referral"
-        type="text"
-        name="referral"
-        value={formData.referral}
-        onChange={handleInputChange}
-        placeholder="Optional" />
+      <SelectField label="Choose one domain to participate in" name="domain" options={domains} value={formData.domain} onChange={handleInputChange} required domainStatus={domainStatus} />
+      <InputField label="Referral" type="text" name="referral" value={formData.referral} onChange={handleInputChange} placeholder="Optional" />
     </div>
   );
 };
-
 
 // Main Page Component
 export default function Home() {
@@ -313,21 +300,18 @@ export default function Home() {
   const [paymentSessionId, setPaymentSessionId] = useState<string | null>(null);
   const [merchantName, setMerchantName] = useState('');
   const [merchantEmail, setMerchantEmail] = useState('');
-  const [domainCounts, setDomainCounts] = useState<Record<string, number>>({});
+  const [domainStatus, setDomainStatus] = useState<Record<string, boolean>>({});
   const [formErrors, setFormErrors] = useState({ email: '', contact: '' });
 
   useEffect(() => {
     setMerchantName(process.env.NEXT_PUBLIC_MERCHANT_NAME || 'ACM MPSTME');
     setMerchantEmail(process.env.NEXT_PUBLIC_MERCHANT_EMAIL || 'pfe@mpst.me');
-  }, []); // The empty dependency array ensures this runs only once.
+  }, []);
 
   useEffect(() => {
     const initializeSDK = async () => {
-      // Dynamically import the package only on the client-side
       const { load } = await import("@cashfreepayments/cashfree-js");
-      const cf = await load({
-        mode: "production" //use sandobox for dev
-      });
+      const cf = await load({ mode: "production" }); // use 'sandbox' for dev
       setCashfree(cf);
     };
     initializeSDK();
@@ -366,15 +350,15 @@ export default function Home() {
     }
 
     setFormErrors(errors);
-    if (!isValid) return; // Stop submission if there are errors
+    if (!isValid) return;
 
     setIsLoading(true);
 
     if (!cashfree) {
       console.error("Cashfree SDK not initialized yet.");
+      setIsLoading(false);
       return;
     }
-    setIsLoading(true);
 
     try {
       const response = await fetch('/api/create-order', {
@@ -388,12 +372,9 @@ export default function Home() {
       if (data.success && data.payment_session_id) {
         setPaymentSessionId(data.payment_session_id);
         setOrderId(data.order_id);
-        // The checkout will be rendered in a useEffect hook when paymentSessionId is set
       } else {
-
         if (data.error === 'DOMAIN_FULL') {
           alert(`${data.message}\n\nPlease refresh the page and select a different domain.`);
-          // Optionally refresh domain counts
           window.location.reload();
         } else {
           alert(data.message || 'Failed to create order. Please try again.');
@@ -409,10 +390,9 @@ export default function Home() {
 
   useEffect(() => {
     if (paymentSessionId && cashfree) {
-      const checkoutOptions = {
+      const checkoutOptions: CheckoutOptions = {
         paymentSessionId: paymentSessionId,
-        redirectTarget: "_modal", // Use "_self" to render in the same container
-
+        redirectTarget: "_modal",
         appearance: {
           theme: 'dark',
           variables: {
@@ -424,7 +404,6 @@ export default function Home() {
             borderRadius: '8px'
           }
         },
-        // Alternative method using style object (if appearance doesn't work)
         style: {
           base: {
             color: '#ffffff',
@@ -448,62 +427,38 @@ export default function Home() {
           }
         }
       };
+
       cashfree.checkout(checkoutOptions).then((result: CheckoutResult) => {
-        // console.log(JSON.stringify(result));
-        if (result.error) {
-          // This will be true whenever user clicks on close icon inside the modal or any error happens during the payment
-          // console.log("User has closed the popup or there is some payment error, Check for Payment Status");
-          // console.log(result.error);
-        }
-        if (result.redirect) {
-          // This will be true when the payment redirection page couldnt be opened in the same window
-          // This is an exceptional case only when the page is opened inside an inAppBrowser
-          // In this case the customer will be redirected to return url once payment is completed
-          // console.log("Payment will be redirected");
-        }
-        if (result.paymentDetails) {
-          // This will be called whenever the payment is completed irrespective of transaction status
-          // console.log("Payment has been completed, Check for Payment Status");
-          // console.log(result.paymentDetails.paymentMessage);
-        }
         if (result.paymentDetails || result.error) {
-          // If the process is finished (success, fail, or closed), redirect to the status page.
-          // Our /api/get-status route will determine the final outcome.
           if (orderId) {
             router.push(`/payment-status?order_id=${orderId}`);
           } else {
-            // Fallback if something went wrong and we don't have the orderId
             console.error("Order ID not available for redirect.");
             setIsLoading(false);
           }
         }
       });
-      setIsLoading(false); // Stop loading once checkout is rendered
+      setIsLoading(false);
     }
-  }, [paymentSessionId, cashfree]);
+  }, [paymentSessionId, cashfree, orderId, router]);
 
   const headPosition = progress;
   const bodyPosition = Math.max(0, progress - 1);
 
+  // Fetch new boolean domain status
   useEffect(() => {
-    const fetchDomainCounts = async () => {
+    const fetchDomainStatus = async () => {
       try {
         const response = await fetch('/api/domain-count');
-        const data = await response.json();
-        if (data.success) {
-          setDomainCounts(data.counts);
+        if (data.success && data.registrationAllowed) {
+          setDomainStatus(data.registrationAllowed as Record<string, boolean>);
         }
       } catch (error) {
-        console.error("Failed to fetch domain counts:", error);
+        console.error("Failed to fetch domain status:", error);
       }
     };
-    fetchDomainCounts();
-  }, []); // Empty array ensures this runs only once on page load
-
-  useEffect(() => {
-    const filledFields = Object.values(formData).filter(value => value !== '').length;
-    setProgress((filledFields / totalFields) * 100);
-  }, [formData, totalFields]);
+    fetchDomainStatus();
+  }, []);
 
   return (
     <>
@@ -535,7 +490,12 @@ export default function Home() {
             <Header />
             {!paymentSessionId ? (
               <form onSubmit={handleSubmit}>
-                <RegistrationForm formData={formData} handleInputChange={handleInputChange} domainCounts={domainCounts} errors={formErrors} />
+                <RegistrationForm
+                  formData={formData}
+                  handleInputChange={handleInputChange}
+                  domainStatus={domainStatus}
+                  errors={formErrors}
+                />
                 <div className="mt-10 text-center">
                   <div className="">
                     <p className="mb-2 text-2xl font-bold text-white">Ticket Price: ₹100</p>
@@ -589,8 +549,6 @@ export default function Home() {
             </div>
           </div>
         </div>
-
-
       </main>
     </>
   );
