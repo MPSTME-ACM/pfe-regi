@@ -14,6 +14,7 @@
     "cashfree-pg": "^5.0.8",
     "drizzle-kit": "^0.31.4",
     "drizzle-orm": "^0.44.5",
+    "framer-motion": "^12.23.12",
     "googleapis": "^159.0.0",
     "html-to-image": "^1.11.13",
     "html5-qrcode": "^2.3.8",
