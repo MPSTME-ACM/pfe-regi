@@ -157,7 +157,7 @@ const StatusDisplay = () => {
                                                 alt="Registration QR Code"
                                                 width={512}
                                                 height={512}
-                                                className="bg-white p-2 rounded-lg w-48 h-48"
+                                                className="bg-white p-1 rounded-lg w-48 h-48"
                                                 quality={100}
                                             />
                                         )}
@@ -177,7 +177,7 @@ const StatusDisplay = () => {
 
                         <button
                             onClick={handleDownload}
-                            className="mt-8 text-center text-[#e97bfc] font-bold py-3 px-8 rounded-lg border-2 border-[#e97bfc] transition-all duration-300 ease-in-out transform hover:bg-[#e97bfc]/10 hover:shadow-lg hover:shadow-[#e97bfc]/20 active:scale-95"
+                            className="mt-8 text-center text- font-bold py-3 px-8 rounded-lg border-2 bg-[#e97bfc] text-white font-bold py-3 px-6 rounded-lg text-lg transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-2xl hover:shadow-[#e97bfc]/50 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Download Ticket
                         </button>
@@ -204,7 +204,7 @@ const StatusDisplay = () => {
                     <div className="w-full max-w-md text-center">
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
-                            className="h-16 w-16 mx-auto mb-4 text-red-500"
+                            className="h-16 w-16 mx-auto mb-4 text-pink-600"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -216,8 +216,8 @@ const StatusDisplay = () => {
                                 d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
                             />
                         </svg>
-                        <h1 className="text-4xl font-bold text-red-500 mb-4">Payment Failed</h1>
-                        <p className="text-lg text-gray-300">Unfortunately, your payment could not be processed.</p>
+                        <h1 className="text-4xl font-bold text-pink-600 mb-4">Payment Failed</h1>
+                        <p className="text-lg text-pink-400">Unfortunately, your payment could not be processed.</p>
                         <Link
                             href="/"
                             className="mt-8 inline-block bg-gray-700 text-white font-bold py-3 px-6 rounded-lg text-lg hover:bg-gray-600 transition-colors duration-300"
@@ -234,9 +234,9 @@ const StatusDisplay = () => {
 
 export default function PaymentStatusPage() {
     return (
-        <main className="min-h-screen bg-[#0d0d1a] text-white flex flex-col items-center justify-center p-4 font-sans relative overflow-hidden">
+        <main className="min-h-screen text-white flex flex-col items-center justify-center p-4 font-sans relative overflow-hidden">
             <div
-                className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[#0d0d1a] via-[#1a0d1d] to-[#0d0d1a] animate-gradient-xy"
+                className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[#0d0d1a3d] via-[#1a0d1d39] to-[#0d0d1a10] animate-gradient-xy"
                 style={{ zIndex: -1 }}
             ></div>
             <Suspense fallback={<div className="text-2xl text-gray-400">Loading Page...</div>}>
