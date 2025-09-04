@@ -64,7 +64,7 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
     // Combine the initials and other data
-    const orderId = `${firstInitial}${lastInitial}${formData.contact.slice(-4)}${currentDate}${currentHour}${formData.domain.charAt(0).toUpperCase()}`;
+    const orderId = `${firstInitial}${lastInitial}${formData.contact.slice(-4)}${Date.now().toString().slice(-5)}${formData.domain.charAt(0).toUpperCase()}`;
 
     await db.insert(registrations).values({
       name: formData.name,
