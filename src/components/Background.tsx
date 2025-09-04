@@ -39,7 +39,7 @@ const Background = () => {
             90deg,
             rgba(255, 255, 255, 0) 0%,
             rgba(255, 170, 255, 0.95) 50%,
-            rgba(255, 255, 255, 0) 100%
+            rgba(255, 255, 255, 0) 80%
           );
           filter: blur(34px);
           mix-blend-mode: screen;
@@ -56,7 +56,7 @@ const Background = () => {
           pointer-events: none;
           color: hsl(290 100% 70% / 0.28); /* same family, low alpha */
           background-image: radial-gradient(currentColor 1px, transparent 1px);
-          background-size: 10px 10px;
+          background-size: 20px 20px;
           will-change: opacity;
           contain: paint;
         }
@@ -83,10 +83,10 @@ const Background = () => {
 
       <div className="absolute inset-0 hidden md:block" style={{ zIndex: 1 }}>
         <FlickeringGrid
-          squareSize={4}
-          gridGap={6}
-          flickerChance={0.46} // ~+31%
-          maxOpacity={0.33} // ~+32%
+          squareSize={8}
+          gridGap={12}
+          flickerChance={0.46}
+          maxOpacity={0.33}
           color="hsl(290 100% 70%)"
         />
       </div>
@@ -105,9 +105,15 @@ const Background = () => {
       {/* Diagonal bright ray through the middle */}
       <div className="v0-ray" style={{ zIndex: 3 }} />
 
-      <div className="absolute inset-0 hidden md:block" style={{ zIndex: 2 }}>
-        <DotPattern cr={1} width={20} height={20} glow className="text-fuchsia-300/35" />
-      </div>
+      <div
+        className="absolute inset-0 hidden md:block opacity-35"
+        style={{
+          zIndex: 2,
+          backgroundImage: `radial-gradient(circle at center, rgba(196, 181, 253, 0.4) 1px, transparent 1px)`,
+          backgroundSize: '20px 20px',
+          animation: 'v0-softPulse 8s ease-in-out infinite'
+        }}
+      />
     </div>
   )
 }

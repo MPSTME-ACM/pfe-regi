@@ -319,23 +319,23 @@ export default function Home() {
   const [domainStatus, setDomainStatus] = useState<Record<string, boolean>>({});
   const [formErrors, setFormErrors] = useState({ email: '', contact: '' });
 
-  // Load saved form data on component mount
-  useEffect(() => {
-    const savedData = localStorage.getItem('pfe-form-data');
-    if (savedData) {
-      try {
-        const parsedData = JSON.parse(savedData);
-        setFormData(parsedData);
-      } catch (error) {
-        console.error('Failed to parse saved form data:', error);
-      }
+// Load saved form data on component mount
+useEffect(() => {
+  const savedData = sessionStorage.getItem('pfe-form-data');
+  if (savedData) {
+    try {
+      const parsedData = JSON.parse(savedData);
+      setFormData(parsedData);
+    } catch (error) {
+      console.error('Failed to parse saved form data:', error);
     }
-  }, []);
+  }
+}, []);
 
-  // Save form data to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem('pfe-form-data', JSON.stringify(formData));
-  }, [formData]);
+// Save form data to sessionStorage whenever it changes
+useEffect(() => {
+  sessionStorage.setItem('pfe-form-data', JSON.stringify(formData));
+}, [formData]);
 
   useEffect(() => {
     setMerchantName(process.env.NEXT_PUBLIC_MERCHANT_NAME || 'ACM MPSTME');
@@ -407,7 +407,7 @@ export default function Home() {
       if (data.success && data.payment_session_id) {
         setPaymentSessionId(data.payment_session_id);
         setOrderId(data.order_id);
-        localStorage.removeItem('pfe-form-data');
+        sessionStorage.removeItem('pfe-form-data');
       } else {
         if (data.error === 'DOMAIN_FULL') {
           alert(`${data.message}\n\nPlease refresh the page and select a different domain.`);

@@ -27,7 +27,7 @@ const AdminLogin = ({
   };
 
   return (
-    <div className="w-full max-w-sm p-8 bg-black/50 backdrop-blur-md rounded-2xl border border-white/10 shadow-2xl shadow-[#e97bfc]/10">
+    <div className="w-full max-w-sm p-8 0 backdrop-blur-md rounded-2xl border border-white/10 shadow-2xl shadow-[#e97bfc]/10">
       <h2 className="text-2xl font-bold text-center text-white mb-6">Admin Verification</h2>
       <form onSubmit={handleSubmit}>
         <input

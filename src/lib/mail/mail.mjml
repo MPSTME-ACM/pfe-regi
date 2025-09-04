@@ -11,10 +11,12 @@
       .gradient-bg {
         background: linear-gradient(135deg, #1a0d1f 0%, #0d0d1a 50%, #1a0d1f 100%);
       }
+
       .purple-text {
         color: #e97bfc !important;
         font-weight: bold;
       }
+
       .qr-container {
         background: #ffffff;
         border: 2px dashed #e97bfc;
@@ -22,15 +24,18 @@
         padding: 15px;
         display: inline-block;
       }
+
       .details-table td {
         padding: 12px 0;
         vertical-align: top;
       }
+
       .details-label {
         font-weight: bold;
         color: #1a0d1f;
         width: 120px;
       }
+
       .details-value {
         color: #333333;
       }
@@ -107,7 +112,17 @@
         <mj-text font-size="14px" color="#666666" align="center" padding-bottom="20px">
           Please present this QR code at the venue for entry
         </mj-text>
-        <mj-image src="cid:qr-code" alt="Entry QR Code" width="200px" align="center" css-class="qr-container" />
+        <mj-text align="center" padding="0">
+          <div style="
+            background: #ffffff;
+            border: 2px dashed #e97bfc;
+            border-radius: 12px;
+            padding: 15px;
+            display: inline-block;
+          ">
+            <img src="cid:qr-code" alt="Entry QR Code" width="200px" style="display: block;" />
+          </div>
+        </mj-text>
         <mj-text font-size="12px" color="#999999" align="center" padding-top="10px">
           Save this email or take a screenshot for easy access
         </mj-text>

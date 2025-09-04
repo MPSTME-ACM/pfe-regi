@@ -85,9 +85,9 @@ const StatusDisplay = () => {
                 cacheBust: true,
                 backgroundColor: "#0d0d1a",
                 quality: 1.0,
-                pixelRatio: 2,
-                width: 400,
-                height: 600,
+                pixelRatio: 4,
+                width: 800,
+                height: 1200,
             })
                 .then((dataUrl) => {
                     const link = document.createElement("a");
@@ -155,9 +155,10 @@ const StatusDisplay = () => {
                                             <Image
                                                 src={details.qrCodeUrl}
                                                 alt="Registration QR Code"
-                                                width={256}
-                                                height={256}
+                                                width={512}
+                                                height={512}
                                                 className="bg-white p-2 rounded-lg w-48 h-48"
+                                                quality={100}
                                             />
                                         )}
                                     </div>
