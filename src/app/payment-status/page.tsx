@@ -74,7 +74,7 @@ const StatusDisplay = () => {
                     setHasRetried(true);
                     fetchStatus(orderId);
                 }
-            }, 3000);
+            }, 1500);
             return () => clearTimeout(retryTimeout);
         }
     }, [details, hasRetried, status]);
@@ -91,7 +91,7 @@ const StatusDisplay = () => {
             })
                 .then((dataUrl) => {
                     const link = document.createElement("a");
-                    const fileName = `${details.name.replace(/\s+/g, "_")}-PFE-Ticket.jpeg`;
+                    const fileName = `${details.name.replace(/\s+/g, "")}-PFE-Ticket.jpeg`;
                     link.download = fileName;
                     link.href = dataUrl;
                     link.click();
@@ -123,7 +123,7 @@ const StatusDisplay = () => {
                             <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-pink-400 mx-auto mb-6"></div>
                             <h1 className="text-3xl font-bold text-pink-400 mb-4">Generating Ticket...</h1>
                             <p className="text-gray-300">
-                                Your payment is successful. We are generating your event pass.
+                                Your payment is successful. We are generating your ticket.
                                 Please wait a moment.
                             </p>
                         </div>
@@ -137,7 +137,7 @@ const StatusDisplay = () => {
                     >
                         <div className="text-center mb-8">
                             <h1 className="text-3xl sm:text-4xl font-bold text-white">Payment Successful!</h1>
-                            <p className="text-gray-400 mt-2">Your Event Pass is ready.</p>
+                            <p className="text-gray-400 mt-2">Your Ticket is ready.</p>
                         </div>
 
                         <div
@@ -168,7 +168,7 @@ const StatusDisplay = () => {
                                         <p className="text-sm text-gray-400 mt-3">
                                             {details.course} &bull; {details.year}
                                         </p>
-                                        <p className="text-xs text-gray-500 tracking-wider font-mono mt-4 uppercase">Booking ID</p>
+                                        <p className="text-xs text-gray-500 tracking-wider font-mono mt-4 uppercase">ORDER ID</p>
                                         <p className="text-xs text-gray-300 tracking-wider font-mono">{details.orderId}</p>
                                     </div>
                                 </div>

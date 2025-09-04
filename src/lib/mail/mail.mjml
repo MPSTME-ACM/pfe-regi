@@ -107,7 +107,7 @@
     <mj-section background-color="#ffffff" padding="40px 20px">
       <mj-column>
         <mj-text font-size="20px" font-weight="bold" color="#1a0d1f" align="center" padding-bottom="20px">
-          Your Entry Pass
+          Your Ticket
         </mj-text>
         <mj-text font-size="14px" color="#666666" align="center" padding-bottom="20px">
           Please present this QR code at the venue for entry
