@@ -52,7 +52,7 @@ export async function POST(request: Request) {
       throw new Error('Missing GOOGLE_SHEETS_SHEET_ID env variable');
     }
 
-    console.log('[SYNC] Starting sync process...');
+    // console.log('[SYNC] Starting sync process...');
 
     // --- Step A: Fetch data from both sources ---
     const [sheetResponse, dbRegistrations] = await Promise.all([
@@ -149,7 +149,7 @@ export async function POST(request: Request) {
     }
 
     const message = `Sync complete. Updated: ${recordsToUpdate.length}. Appended: ${recordsToAppend.length}.`;
-    console.log(`[SYNC] ${message}`);
+    // console.log(`[SYNC] ${message}`);
     return NextResponse.json({ success: true, message });
 
   } catch (error) {
