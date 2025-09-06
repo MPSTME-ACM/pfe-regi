@@ -12,6 +12,7 @@
     "@cashfreepayments/cashfree-js": "^1.0.5",
     "@neondatabase/serverless": "^1.0.1",
     "cashfree-pg": "^5.0.8",
+    "chart.js": "^4.5.0",
     "drizzle-kit": "^0.31.4",
     "drizzle-orm": "^0.44.5",
     "framer-motion": "^12.23.12",
@@ -25,12 +26,14 @@
     "qrcode": "^1.5.4",
     "qrcode-with-logos": "^1.1.1",
     "react": "19.1.0",
+    "react-chartjs-2": "^5.3.0",
     "react-dom": "19.1.0",
     "ts-node": "^10.9.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "@types/chart.js": "^4.0.1",
     "@types/node": "^20",
     "@types/nodemailer": "^7.0.1",
     "@types/pg": "^8.15.5",
