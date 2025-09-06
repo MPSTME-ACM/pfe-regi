@@ -25,11 +25,65 @@ ChartJS.register(
   LineElement
 );
 
+const AdminLogin = ({
+  onLogin,
+  error,
+  setError,
+}: {
+  onLogin: (user: string, pass: string) => void;
+  error: string;
+  setError: (err: string) => void;
+}) => {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!username || !password) {
+      setError('Username and Password are required.');
+      return;
+    }
+    setError('');
+    onLogin(username, password);
+  };
+
+  return (
+    <div className="w-full max-w-sm p-8 0 backdrop-blur-md rounded-2xl border border-white/10 shadow-2xl shadow-[#e97bfc]/10">
+      <h2 className="text-2xl font-bold text-center text-white mb-6">Admin Verification</h2>
+      <form onSubmit={handleSubmit}>
+        <input
+          type="text"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          placeholder="Username"
+          className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#f8c8fc] transition-all"
+        />
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Password"
+          className="w-full mt-4 bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#f8c8fc] transition-all"
+        />
+        {error && <p className="text-red-500 text-sm mt-2 text-center">{error}</p>}
+        <button
+          type="submit"
+          className="w-full mt-6 bg-[#e97bfc] text-black font-bold py-3 px-6 rounded-lg text-lg transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg hover:shadow-[#e97bfc]/50 active:scale-95"
+        >
+          Authenticate
+        </button>
+      </form>
+    </div>
+  );
+};
+
 const StatsPage = () => {
   const [authCreds, setAuthCreds] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
 
   useEffect(() => {
     const creds = sessionStorage.getItem('admin-creds');
@@ -62,6 +116,63 @@ const StatsPage = () => {
     fetchStats();
   }, [authCreds]);
 
+    const handleLogin = async () => {
+    if (!username || !password) {
+      setError('Username and password are required.');
+      return;
+    }
+
+    const creds = `Basic ${btoa(`${username}:${password}`)}`;
+
+    try {
+      const res = await fetch('/api/login', {
+        headers: { Authorization: creds },
+      });
+
+      if (!res.ok) {
+        setError('Invalid username or password');
+        return;
+      }
+
+      sessionStorage.setItem('admin-creds', creds);
+      setAuthCreds(creds);
+      setError('');
+    } catch (err) {
+      setError('Network error during authentication');
+    }
+  };
+
+  if (!authCreds) {
+    return (
+      <main className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-4">
+        <div className="w-full max-w-sm p-8 backdrop-blur-md rounded-2xl border border-white/10 shadow-2xl shadow-[#e97bfc]/10">
+          <h2 className="text-2xl font-bold text-center mb-6">Admin Login</h2>
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Username"
+            className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 mb-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#f8c8fc]"
+          />
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Password"
+            className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#f8c8fc]"
+          />
+          {error && <p className="text-red-500 text-sm mt-2 text-center">{error}</p>}
+          <button
+            onClick={handleLogin}
+            className="w-full mt-6 bg-[#e97bfc] text-black font-bold py-3 px-6 rounded-lg text-lg hover:scale-105 transition-all"
+          >
+            Authenticate
+          </button>
+        </div>
+      </main>
+    );
+  }
+  
   const handleLogout = () => {
     sessionStorage.removeItem('admin-creds');
     setAuthCreds(null);
