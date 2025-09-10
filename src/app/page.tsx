@@ -276,10 +276,10 @@ interface RegistrationFormProps {
 const RegistrationForm: React.FC<RegistrationFormProps> = ({ formData, handleInputChange, domainStatus, errors }) => {
   const domains = ['C', 'Python', 'Web', 'DSA', 'AIML'];
   const years = ['First Year', 'Second Year', 'Third Year', 'Fourth Year', 'Fifth Year'];
-  const courses = ['BTI', 'BTech', 'MBA Tech'];
+  const courses = ['BTI', 'BTech', 'MBA Tech', 'Other'];
   const departments = [
     'Computer Engineering', 'EXTC', 'Cybersecurity', 'AI', 'CSDS 311',
-    'Data Science', 'Mechanical', 'IT', 'Civil', 'CSBS', 'Mechatronics'
+    'Data Science', 'Mechanical', 'IT', 'Civil', 'CSBS', 'Mechatronics', 'Other'
   ];
 
   return (
