@@ -86,8 +86,8 @@ const StatusDisplay = () => {
                 backgroundColor: "#0d0d1a",
                 quality: 1.0,
                 pixelRatio: 4,
-                width: 800,
-                height: 1200,
+                width: 600,
+                height: 900,
             })
                 .then((dataUrl) => {
                     const link = document.createElement("a");
