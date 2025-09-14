@@ -32,7 +32,7 @@ export async function POST(request: Request) {
 
     const currentDomainCount = domainCheckQuery[0]?.count || 0;
 
-    if (currentDomainCount >= 60) {
+    if (currentDomainCount >= 120) {
       return NextResponse.json({
         success: false,
         message: `Sorry, the ${formData.domain} domain is full. Please choose a different domain.`,

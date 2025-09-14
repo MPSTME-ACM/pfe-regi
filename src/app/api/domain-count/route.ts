@@ -40,7 +40,7 @@ export async function GET() {
         );
 
       const currentDomainCount = domainCheckQuery[0]?.count || 0;
-      registrationAllowed[domain] = currentDomainCount < 60;
+      registrationAllowed[domain] = currentDomainCount < 120;
     }
 
     // Save to cache
