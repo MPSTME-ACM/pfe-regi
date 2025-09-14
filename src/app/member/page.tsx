@@ -238,7 +238,7 @@ const MemberRegistrationForm: React.FC<MemberFormProps> = ({
         label="Contact Number"
         type="tel"
         placeholder="9876543210"
-        name="phone"
+        name="contact"
         value={formData.phone}
         onChange={handleInputChange}
         required

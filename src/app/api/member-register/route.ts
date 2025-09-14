@@ -1,4 +1,3 @@
-// app/api/create-order/route.ts
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { registrations } from '@/lib/db/schema';
