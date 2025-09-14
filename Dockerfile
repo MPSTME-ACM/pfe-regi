@@ -3,6 +3,9 @@ FROM node:18-alpine
 
 WORKDIR /app
 
+# Need this for Sync Job
+RUN apk add --no-cache curl
+
 COPY package.json package-lock.json* ./
 RUN npm install
 
