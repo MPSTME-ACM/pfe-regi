@@ -5,7 +5,7 @@ services:
       - .env
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      test: ["CMD", "curl", "-f", "https://register.pfe.mpstmeacm.com/"]
       interval: 30s
       timeout: 10s
       start_period: 10s
