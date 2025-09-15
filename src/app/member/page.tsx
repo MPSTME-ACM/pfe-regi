@@ -1,7 +1,36 @@
 "use client";
 import React, { useState, useEffect, Suspense } from "react";
-import Link from "next/link";
 import Image from 'next/image';
+
+const Overlay = ({ children }: { children: React.ReactNode }) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md bg-black/60">
+    {children}
+  </div>
+);
+
+// Loader Spinner
+const Loader = () => (
+  <Overlay>
+    <div className="flex flex-col items-center space-y-4">
+      <div className="w-16 h-16 border-4 border-[#e97bfc] border-t-transparent rounded-full animate-spin"></div>
+      <p className="text-lg text-white font-semibold">Registering...</p>
+    </div>
+  </Overlay>
+);
+
+// Success Message
+const SuccessOverlay = () => (
+  <Overlay>
+    <div className="bg-black/80 border border-white/20 rounded-2xl shadow-2xl p-8 max-w-lg text-center animate-fadeIn">
+      <h2 className="text-2xl sm:text-3xl font-bold text-[#f8c8fc] mb-4">
+        Thank You for Registering!
+      </h2>
+      <p className="text-gray-300 text-lg">
+        Please check your email for your ticket.
+      </p>
+    </div>
+  </Overlay>
+);
 
 // --- Admin Login Component (same as verify/page.tsx) ---
 const AdminLogin = ({
@@ -160,7 +189,7 @@ const SelectField: React.FC<SelectFieldProps> = ({ label, name, options, value, 
 interface MemberFormProps {
   formData: Record<string, string>;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
-  errors: { email: string; phone: string };
+  errors: { email: string; contact: string };
   domainStatus: Record<string, boolean>;
 }
 
@@ -185,6 +214,7 @@ const MemberRegistrationForm: React.FC<MemberFormProps> = ({
     "Civil",
     "CSBS",
     "Mechatronics",
+    "CSEDS"
   ];
   const role = ["Executive", "Core"];
   const departmentACM = [
@@ -238,11 +268,11 @@ const MemberRegistrationForm: React.FC<MemberFormProps> = ({
         label="Contact Number"
         type="tel"
         placeholder="9876543210"
-        name="phone"
-        value={formData.phone}
+        name="contact"
+        value={formData.contact}
         onChange={handleInputChange}
         required
-        error={errors.phone}
+        error={errors.contact}
       />
       <SelectField
         label="Course"
@@ -306,7 +336,7 @@ const MemberRegisterPageContent = () => {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    phone: "",         // changed contact -> phone
+    contact: "",
     course: "",
     department: "",
     year: "",
@@ -314,7 +344,7 @@ const MemberRegisterPageContent = () => {
     role: "",
     departmentACM: "",
   });
-  const [formErrors, setFormErrors] = useState({ email: "", phone: "" });
+  const [formErrors, setFormErrors] = useState({ email: "", contact: "" });
   const [isLoading, setIsLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const [domainStatus, setDomainStatus] = useState<Record<string, boolean>>({});
@@ -361,7 +391,7 @@ const MemberRegisterPageContent = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    if (name === "email" || name === "phone") {
+    if (name === "email" || name === "contact") {
       setFormErrors(prev => ({ ...prev, [name]: "" }));
     }
   };
@@ -371,15 +401,15 @@ const MemberRegisterPageContent = () => {
 
     // validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const phoneRegex = /^[6-9]\d{9}$/;
+    const contactRegex = /^[6-9]\d{9}$/;
     let isValid = true;
-    const errors = { email: "", phone: "", domain: "" };
+    const errors = { email: "", contact: "", domain: "" };
     if (!emailRegex.test(formData.email)) {
       errors.email = "Please enter a valid email address.";
       isValid = false;
     }
-    if (!phoneRegex.test(formData.phone)) {
-      errors.phone = "Please enter a valid 10-digit mobile number.";
+    if (!contactRegex.test(formData.contact)) {
+      errors.contact = "Please enter a valid 10-digit mobile number.";
       isValid = false;
     }
     setFormErrors(errors);
@@ -401,12 +431,12 @@ const MemberRegisterPageContent = () => {
       if (!res.ok) {
         throw new Error(data.message || "Member registration failed.");
       }
-      setSuccessMsg("Member registered successfully!");
+      setSuccessMsg("success");
       // clear form
       setFormData({
         name: "",
         email: "",
-        phone: "",
+        contact: "",
         course: "",
         department: "",
         year: "",
@@ -479,6 +509,8 @@ const MemberRegisterPageContent = () => {
           </div>
         </form>
       </div>
+      {isLoading && <Loader />}
+      {successMsg && <SuccessOverlay />}
     </div>
   );
 };

@@ -2,9 +2,18 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { registrations } from '@/lib/db/schema';
 import { and, eq, count } from 'drizzle-orm';
+import qrcode from 'qrcode';
+import { sendMail } from '@/lib/mail/mailUtil';
 
 export async function POST(request: Request) {
   try {
+    const auth = request.headers.get('authorization') || '';
+    const expected = `Basic ${Buffer.from(`acm:${process.env.MEMBER_PASSWORD}`).toString('base64')}`;
+
+    if (!(auth === expected)) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+    
     const formData = await request.json();
 
     const domainCheckQuery = await db
@@ -56,6 +65,10 @@ export async function POST(request: Request) {
       orderId: orderId,
       paymentStatus: 'failure',
     });
+    
+    const qrCodeDataUrl = await qrcode.toDataURL(`${process.env.NEXT_PUBLIC_SITE_URL}/verify?orderId=${orderId}`);
+
+    await sendMail(formData.email, formData.domain, formData.name,  qrCodeDataUrl, orderId)
 
     return NextResponse.json({
       success: true,

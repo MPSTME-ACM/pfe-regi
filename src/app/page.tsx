@@ -279,7 +279,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ formData, handleInp
   const courses = ['BTI', 'BTech', 'MBA Tech', 'Other'];
   const departments = [
     'Computer Engineering', 'EXTC', 'Cybersecurity', 'AI', 'CSDS 311',
-    'Data Science', 'Mechanical', 'IT', 'Civil', 'CSBS', 'Mechatronics', 'Other'
+    'Data Science', 'Mechanical', 'IT', 'Civil', 'CSBS', 'Mechatronics', 'CSEDS', 'Other'
   ];
 
   return (

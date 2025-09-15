@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 import 'dotenv/config';
-
+import qrcode from 'qrcode';
 const lastSentTimes = new Map();
 
 function canSendEmail(mail: string) {
@@ -15,7 +15,7 @@ function canSendEmail(mail: string) {
   return true;
 }
 
-export async function sendMail(mail: string, domain: string, name: string, qrUrl: string, orderId: string) {
+export async function sendMail(mail: string, domain: string, name: string, orderId: string) {
   if (!canSendEmail(mail)) {
     return;
   }
@@ -23,6 +23,8 @@ export async function sendMail(mail: string, domain: string, name: string, qrUrl
   if (!process.env.SMTP_HOST) {
     throw new Error("SMTP_HOST is not defined in env");
   }
+  const qrUrl = await qrcode.toDataURL(`${process.env.NEXT_PUBLIC_SITE_URL}/verify?orderId=${orderId}`);
+
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT),
@@ -114,4 +116,4 @@ export async function sendMail(mail: string, domain: string, name: string, qrUrl
 }
 
 
-sendMail("email", "domain", "name", "data:image/png;base64,payload", "orderid")
+sendMail("email", "domain", "name", "orderid")
