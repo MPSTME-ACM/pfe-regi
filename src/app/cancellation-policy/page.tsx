@@ -1,35 +1,43 @@
-import Link from 'next/link';
+import ProgramHeader from '@/app/_components/ProgramHeader';
+import PolicyLinks from '@/app/_components/PolicyLinks';
 
 export default function CancellationPolicyPage() {
-    return (
-        <div className="min-h-screen bg-[#0d0d1a] text-white font-sans p-8 sm:p-12 md:p-16">
-            <div className="max-w-4xl mx-auto">
-                {/* <h1 className="text-4xl font-extrabold text-[#e97bfc] mb-8">Cancellation & Privacy Policy</h1> */}
-                <div className="space-y-6 text-gray-300">
-                    {/* Cancellation & Refund Section */}
-                    <h2 className="text-3xl font-bold text-[#f8c8fc] pt-4">Cancellation & Refund Policy</h2>
-                    <p>Please note that all registration fees for the PFE Workshop are <strong>non-refundable</strong>. Once a payment is made, we cannot provide any refunds or cancellations for any reason. This policy helps us manage event logistics and commitments effectively. We thank you for your understanding.</p>
-                    
-                    {/* Privacy Policy Section */}
-                    <h2 className="text-3xl font-bold text-[#f8c8fc] pt-8">Privacy Policy</h2>
-                    <p>We respect and are committed to protecting your privacy. We will not sell, publish, or rent your personal data to any third party without your consent. By using our site, you agree to the terms of this policy.</p>
-                    
-                    <h3 className="text-xl font-semibold text-[#f8c8fc] pt-4">Information We Collect</h3>
-                    <p>We collect personal information such as your name, email, and contact details to process your registration and provide you with the best possible service. You acknowledge that you are disclosing this information voluntarily. We use appropriate physical and electronic procedures to safeguard the information we collect.</p>
+  const dateRange = 'September 16th - 18th, 2025';
 
-                    <h3 className="text-xl font-semibold text-[#f8c8fc] pt-4">Cookies</h3>
-                    {/* FIX: Replaced " with &quot; to fix unescaped entities error */}
-                    <p>Our site uses &quot;cookies&quot; – small files placed on your hard drive – to analyze web traffic, measure promotional effectiveness, and promote trust and safety. These are primarily &quot;session cookies&quot; that are automatically deleted when you close your browser. We do not control the use of cookies by third parties.</p>
+  return (
+    <main className="min-h-screen text-white font-sans flex items-center justify-center p-4 sm:p-6 md:p-8">
+      <div className="w-full max-w-3xl bg-black/30 backdrop-blur-md rounded-2xl border border-white/10 p-8 sm:p-10 md:p-12">
+        <ProgramHeader dateRange={dateRange} />
 
-                    <h3 className="text-xl font-semibold text-[#f8c8fc] pt-4">Third-Party Links</h3>
-                    <p>This privacy policy does not apply to sites maintained by other companies or organizations to which we may link. We are not responsible for any personal information you submit to third parties via our website.</p>
-                </div>
-                <div className="mt-12">
-                    <Link href="/" className="text-[#7bbeeb] hover:text-[#e97bfc] transition-colors">
-                        &larr; Back to Registration
-                    </Link>
-                </div>
-            </div>
+        <div className="text-center mt-10 mb-8">
+          <h1 className="text-4xl sm:text-5xl font-extrabold text-[#f8c8fc] mb-4 leading-tight">
+            Our Policies
+          </h1>
         </div>
-    );
+
+        <div className="max-w-prose mx-auto space-y-6 text-gray-300 leading-relaxed">
+          <div>
+            <h2 className="text-2xl font-bold text-[#f8c8fc] mb-2">Cancellation & Refund Policy</h2>
+            <p>Please note that all registration fees for the PFE Workshop are <strong>non-refundable</strong>. Once a payment is made, we cannot provide any refunds or cancellations for any reason. This policy helps us manage event logistics and commitments effectively. We thank you for your understanding.</p>
+          </div>
+
+          <div>
+            <h2 className="text-2xl font-bold text-[#f8c8fc] mb-2">Privacy Policy</h2>
+            <p>We respect and are committed to protecting your privacy. We will not sell, publish, or rent your personal data to any third party without your consent. By using our site, you agree to the terms of this policy.</p>
+
+            <h3 className="text-xl font-semibold text-[#f8c8fc] mt-4 mb-2">Information We Collect</h3>
+            <p>We collect personal information such as your name, email, and contact details to process your registration and provide you with the best possible service. You acknowledge that you are disclosing this information voluntarily. We use appropriate physical and electronic procedures to safeguard the information we collect.</p>
+
+            <h3 className="text-xl font-semibold text-[#f8c8fc] mt-4 mb-2">Cookies</h3>
+            <p>Our site uses &quot;cookies&quot; – small files placed on your hard drive – to analyze web traffic, measure promotional effectiveness, and promote trust and safety. These are primarily &quot;session cookies&quot; that are automatically deleted when you close your browser. We do not control the use of cookies by third parties.</p>
+
+            <h3 className="text-xl font-semibold text-[#f8c8fc] mt-4 mb-2">Third-Party Links</h3>
+            <p>This privacy policy does not apply to sites maintained by other companies or organizations to which we may link. We are not responsible for any personal information you submit to third parties via our website.</p>
+          </div>
+        </div>
+
+        <PolicyLinks note="We appreciate your interest in our workshop." />
+      </div>
+    </main>
+  );
 }

@@ -42,6 +42,49 @@ const PAID_STATUSES = ["success", "comped"]
 
 const CARD = "w-full bg-black/30 backdrop-blur-md rounded-2xl border border-white/10"
 
+/** Full-width primary. One per screen, and always the thing to do next. */
+const PRIMARY =
+  "w-full min-h-14 rounded-xl bg-[#e97bfc] px-5 text-lg font-bold text-black " +
+  "transition-[transform,box-shadow] duration-200 ease-out hover:shadow-lg hover:shadow-[#e97bfc]/30 " +
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white active:scale-[0.99] " +
+  // Inert rather than a dimmed accent: a 40%-opacity purple slab still read as
+  // the loudest control on the screen, next to the button you actually want.
+  "disabled:bg-white/[0.07] disabled:text-gray-500 disabled:shadow-none disabled:active:scale-100"
+
+const SECONDARY =
+  "w-full min-h-14 rounded-xl border border-white/20 bg-white/5 px-5 text-lg font-semibold text-white " +
+  "transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 " +
+  "focus-visible:outline-[#f8c8fc] active:bg-white/15"
+
+// --- Icons -------------------------------------------------------------------
+// The verdict is never carried by colour alone: each one pairs its hue with a
+// mark and with a word, so it survives colourblindness and direct sunlight.
+
+const TickMark = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} className="h-8 w-8" aria-hidden="true">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.5l5 5 10-11" />
+  </svg>
+)
+
+const CrossMark = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} className="h-8 w-8" aria-hidden="true">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M7 7l10 10M17 7L7 17" />
+  </svg>
+)
+
+const ArchiveMark = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} className="h-8 w-8" aria-hidden="true">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3.5 7.5h17v3h-17zM5 10.5v9h14v-9M9.75 14h4.5" />
+  </svg>
+)
+
+const QueryMark = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} className="h-8 w-8" aria-hidden="true">
+    <circle cx="12" cy="12" r="8.75" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9.6 9.6a2.5 2.5 0 114.15 2.1c-.9.7-1.75 1.1-1.75 2.2M12 16.6v.01" />
+  </svg>
+)
+
 // --- QR Code Scanner ---------------------------------------------------------
 
 const QrScanner = ({
@@ -91,10 +134,7 @@ const QrScanner = ({
         className="w-full bg-white/5 rounded-xl overflow-hidden border border-white/15"
         aria-label="QR code scanner"
       />
-      <button
-        onClick={onStop}
-        className="mt-5 w-full min-h-14 text-white font-semibold rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-[#f8c8fc]/60 transition"
-      >
+      <button onClick={onStop} className={`${SECONDARY} mt-5`}>
         Cancel
       </button>
 
@@ -144,35 +184,72 @@ const QrScanner = ({
 // --- Verdict banner ----------------------------------------------------------
 // The one thing that must be readable at arm's length in a queue.
 
+/** Mark + word + hue, at the size this has to be read from. */
+const VerdictBanner = ({
+  surface,
+  ink,
+  mark,
+  headline,
+  detail,
+}: {
+  surface: string
+  ink: string
+  mark: React.ReactNode
+  headline: string
+  detail?: string
+}) => (
+  <div
+    role="status"
+    className={`flex items-center gap-4 rounded-xl border px-4 py-5 ${surface} ${ink}`}
+  >
+    <span className="shrink-0" aria-hidden="true">
+      {mark}
+    </span>
+    <span className="min-w-0 text-left">
+      <span className="block text-2xl leading-none font-extrabold tracking-wide">{headline}</span>
+      {detail && <span className="mt-1.5 block text-sm opacity-80">{detail}</span>}
+    </span>
+  </div>
+)
+
 const Verdict = ({ ticket }: { ticket: TicketView }) => {
+  // Archived 2025 tickets are a RECORD, not a rejection. Slate rather than amber:
+  // amber reads as a warning, and a volunteer was left unable to tell whether the
+  // screen was refusing someone. No paid/unpaid verdict is computed here — the
+  // archive is looked up read-only and that decision is not this screen's to make.
   if (ticket.edition === 2025) {
     return (
-      <div className="rounded-xl bg-amber-500/15 border border-amber-400/50 px-4 py-4 text-center">
-        <p className="text-xl font-extrabold text-amber-300 tracking-wide">2025 REGISTRATION</p>
-        <p className="text-sm text-amber-200/80 mt-1">Archived ticket &middot; read-only</p>
-      </div>
+      <VerdictBanner
+        surface="bg-slate-400/10 border-slate-300/40"
+        ink="text-slate-200"
+        mark={<ArchiveMark />}
+        headline="2025 REGISTRATION"
+        detail="Archived ticket · read-only"
+      />
     )
   }
 
   const paid = PAID_STATUSES.includes(ticket.paymentStatus ?? "")
   if (!paid) {
     return (
-      <div className="rounded-xl bg-red-500/20 border border-red-400/60 px-4 py-4 text-center">
-        <p className="text-2xl font-extrabold text-red-300 tracking-wide">NOT PAID</p>
-        <p className="text-sm text-red-200/80 mt-1">
-          Payment status: {ticket.paymentStatus ?? "unknown"} &middot; do not admit
-        </p>
-      </div>
+      <VerdictBanner
+        surface="bg-red-500/20 border-red-400/60"
+        ink="text-red-300"
+        mark={<CrossMark />}
+        headline="NOT PAID"
+        detail={`Payment status: ${ticket.paymentStatus ?? "unknown"} · do not admit`}
+      />
     )
   }
 
   return (
-    <div className="rounded-xl bg-green-500/15 border border-green-400/50 px-4 py-4 text-center">
-      <p className="text-2xl font-extrabold text-green-300 tracking-wide">VALID TICKET</p>
-      {ticket.paymentStatus === "comped" && (
-        <p className="text-sm text-green-200/80 mt-1">Comped registration</p>
-      )}
-    </div>
+    <VerdictBanner
+      surface="bg-green-500/15 border-green-400/50"
+      ink="text-green-300"
+      mark={<TickMark />}
+      headline="VALID TICKET"
+      detail={ticket.paymentStatus === "comped" ? "Comped registration" : undefined}
+    />
   )
 }
 
@@ -263,7 +340,7 @@ const TicketPanel = ({
   if (loading) {
     return (
       <div className={`${CARD} p-10 flex flex-col items-center gap-4`}>
-        <div className="w-12 h-12 border-4 border-dashed rounded-full animate-spin border-[#e97bfc] [animation-duration:2s]" />
+        <span className="block h-10 w-10 rounded-full border-[3px] border-white/15 border-t-[#e97bfc] animate-spin [animation-duration:0.9s] motion-reduce:animate-none" />
         <p className="text-gray-400">Looking up ticket…</p>
       </div>
     )
@@ -271,33 +348,52 @@ const TicketPanel = ({
 
   if (error && !ticket) {
     return (
-      <div className={`${CARD} p-6 text-center`}>
-        <div className="rounded-xl bg-red-500/20 border border-red-400/60 px-4 py-5">
-          <p className="text-2xl font-extrabold text-red-300 tracking-wide">NOT FOUND</p>
-          <p className="text-sm text-red-200/80 mt-2">{error}</p>
+      <div className={`${CARD} p-4 sm:p-6 space-y-5`}>
+        <VerdictBanner
+          surface="bg-red-500/20 border-red-400/60"
+          ink="text-red-300"
+          mark={<QueryMark />}
+          headline="NOT FOUND"
+          detail={error}
+        />
+        <div>
+          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-gray-500">Scanned code</p>
+          <p className="mt-1 font-mono text-sm text-gray-300 break-all">{orderId}</p>
         </div>
-        <p className="text-xs text-gray-500 font-mono mt-4 break-all">{orderId}</p>
       </div>
     )
   }
 
   if (!ticket) return null
 
+  const marked = days.filter((d) => d.present).length
+
   return (
     <div className={`${CARD} p-4 sm:p-6 space-y-5`}>
       <Verdict ticket={ticket} />
 
-      <div className="space-y-2">
+      <div>
         <p className="text-2xl font-bold text-white leading-tight break-words">{ticket.name}</p>
-        <p className="text-[#f8c8fc] font-medium">{ticket.description}</p>
-        <p className="text-sm text-gray-400">
+        <p className="mt-1.5 font-medium text-[#f8c8fc]">{ticket.description}</p>
+        <p className="mt-1.5 text-sm text-gray-400">
           {[ticket.year, ticket.course, ticket.department].filter(Boolean).join(" · ") || "—"}
         </p>
-        <p className="text-xs text-gray-500 font-mono break-all pt-1">{ticket.orderId}</p>
+        {/* Read aloud when something needs sorting out, so it is not the faintest
+            thing on the screen. */}
+        <p className="mt-3 font-mono text-sm tracking-wide text-gray-300 break-all">{ticket.orderId}</p>
       </div>
 
       <div className="border-t border-white/10 pt-5">
-        <h2 className="text-lg font-semibold text-white mb-1">Mark attendance</h2>
+        <div className="mb-3 flex items-baseline justify-between gap-3">
+          <h2 className="text-lg font-semibold text-white">
+            {ticket.readOnly ? "Attendance record" : "Mark attendance"}
+          </h2>
+          {days.length > 0 && (
+            <span className="shrink-0 text-sm font-semibold text-gray-400">
+              {marked}/{days.length} present
+            </span>
+          )}
+        </div>
         <p className="text-sm text-gray-500 mb-3">
           {ticket.readOnly
             ? "Archived 2025 record. Attendance cannot be changed."
@@ -311,24 +407,45 @@ const TicketPanel = ({
           {days.map((day) => (
             <label
               key={day.key}
-              className={`flex items-center gap-4 min-h-16 px-4 rounded-xl border transition-colors ${
+              className={`flex items-center gap-4 min-h-[4.5rem] px-4 rounded-xl border transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[#f8c8fc] ${
                 ticket.readOnly
-                  ? "border-white/10 bg-white/5 opacity-70 cursor-not-allowed"
+                  ? "border-white/10 bg-white/[0.03] cursor-not-allowed"
                   : day.present
                     ? "border-green-400/60 bg-green-500/15 cursor-pointer"
                     : "border-white/20 bg-white/5 cursor-pointer active:bg-white/10"
               }`}
             >
+              {/* The native control carries the semantics; the box beside it is
+                  what a volunteer actually sees and hits. The whole 72px row is
+                  the target either way. */}
               <input
                 type="checkbox"
                 checked={day.present}
                 disabled={ticket.readOnly}
                 onChange={() => toggle(day.key)}
-                className="w-7 h-7 shrink-0 rounded accent-[#e97bfc] bg-white/10 border-white/30 focus:outline-none focus:ring-2 focus:ring-[#f8c8fc]/70 disabled:cursor-not-allowed"
+                className="sr-only"
               />
-              <span className="flex-1 text-lg font-semibold text-white">{day.label}</span>
               <span
-                className={`text-sm font-semibold ${day.present ? "text-green-300" : "text-gray-500"}`}
+                aria-hidden="true"
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border-2 transition-colors ${
+                  day.present
+                    ? "border-green-400 bg-green-400 text-black"
+                    : "border-white/40 bg-white/5 text-transparent"
+                } ${ticket.readOnly ? "opacity-60" : ""}`}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3.5} className="h-5 w-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.5l5 5 10-11" />
+                </svg>
+              </span>
+              <span
+                className={`flex-1 text-lg font-semibold ${ticket.readOnly ? "text-gray-300" : "text-white"}`}
+              >
+                {day.label}
+              </span>
+              <span
+                className={`text-sm font-bold uppercase tracking-wide ${
+                  day.present ? "text-green-300" : "text-gray-500"
+                }`}
               >
                 {day.present ? "Present" : "Absent"}
               </span>
@@ -336,28 +453,34 @@ const TicketPanel = ({
           ))}
         </div>
 
-        {error && ticket && <p className="text-red-400 text-sm mt-3">{error}</p>}
+        {error && ticket && (
+          <p
+            role="alert"
+            className="mt-4 rounded-lg border border-red-400/40 bg-red-500/15 px-4 py-3 text-sm text-red-300"
+          >
+            {error}
+          </p>
+        )}
         {saved && !dirty && (
-          <p className="mt-3 rounded-lg bg-green-500/15 border border-green-400/40 text-green-300 text-center font-semibold py-3">
+          <p className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-green-500/15 border border-green-400/40 text-green-300 text-center font-semibold py-3">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} className="h-5 w-5" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.5l5 5 10-11" />
+            </svg>
             Attendance saved
           </p>
         )}
 
         {!ticket.readOnly && (
-          <button
-            onClick={save}
-            disabled={saving || !dirty}
-            className="w-full mt-4 min-h-14 bg-green-600 text-white text-lg font-bold rounded-xl hover:bg-green-500 focus:outline-none focus:ring-2 focus:ring-green-300/70 transition-colors disabled:opacity-40 disabled:hover:bg-green-600"
-          >
+          <button onClick={save} disabled={saving || !dirty} className={`${PRIMARY} mt-4`}>
             {saving ? "Saving…" : dirty ? "Save attendance" : "No changes"}
           </button>
         )}
       </div>
 
-      <button
-        onClick={onScanNext}
-        className="w-full min-h-14 bg-[#e97bfc] text-black text-lg font-bold rounded-xl shadow-lg shadow-[#e97bfc]/30 focus:outline-none focus:ring-2 focus:ring-[#f8c8fc]/70 active:translate-y-px transition"
-      >
+      {/* Secondary whenever Save is on screen, primary when it is the only button.
+          Deliberately not swapped by `dirty`: a control that changes colour under
+          a volunteer's thumb is how tickets get mis-tapped in a queue. */}
+      <button onClick={onScanNext} className={ticket.readOnly ? PRIMARY : SECONDARY}>
         Scan next ticket
       </button>
     </div>
@@ -434,7 +557,10 @@ const VerifyScreen = ({ creds, logout }: { creds: string; logout: () => void }) 
         </div>
 
         {scanError && (
-          <p className="mb-4 rounded-lg bg-red-500/20 border border-red-400/50 text-red-300 text-center font-semibold py-3">
+          <p
+            role="alert"
+            className="mb-4 rounded-lg bg-red-500/20 border border-red-400/50 text-red-300 text-center font-semibold py-3 px-4"
+          >
             {scanError}
           </p>
         )}
@@ -444,15 +570,24 @@ const VerifyScreen = ({ creds, logout }: { creds: string; logout: () => void }) 
         ) : orderId ? (
           <TicketPanel orderId={orderId} creds={creds} onScanNext={scanNext} />
         ) : (
-          <div className={`${CARD} p-6 text-center`}>
-            <h2 className="text-2xl font-bold text-white mb-2">Ready to verify</h2>
-            <p className="text-gray-400 mb-6">Scan a ticket QR to check it in.</p>
+          <div className={`${CARD} p-6 sm:p-8 text-center`}>
+            <span
+              className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-[#e97bfc]/35 bg-[#e97bfc]/10 text-[#e97bfc]"
+              aria-hidden="true"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-8 w-8">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 9V5.5A1.5 1.5 0 015.5 4H9M15 4h3.5A1.5 1.5 0 0120 5.5V9M20 15v3.5a1.5 1.5 0 01-1.5 1.5H15M9 20H5.5A1.5 1.5 0 014 18.5V15" />
+                <path strokeLinecap="round" d="M4 12h16" />
+              </svg>
+            </span>
+            <h2 className="mt-5 text-2xl font-bold text-white">Ready to verify</h2>
+            <p className="mt-2 mb-6 text-gray-400">Scan a ticket QR to check it in.</p>
             <button
               onClick={() => {
                 setScanError("")
                 setScanning(true)
               }}
-              className="w-full min-h-14 bg-[#e97bfc] text-black text-lg font-bold rounded-xl shadow-lg shadow-[#e97bfc]/30 focus:outline-none focus:ring-2 focus:ring-[#f8c8fc]/70 active:translate-y-px transition"
+              className={PRIMARY}
             >
               Start scanning
             </button>

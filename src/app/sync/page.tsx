@@ -1,175 +1,140 @@
-// app/sync/page.tsx
-
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import AdminGate, { clearStoredCreds } from '@/components/admin/AdminGate';
 
-const AdminLogin = ({
-  onLogin,
-  error,
-  setError,
-}: {
-  onLogin: (user: string, pass: string) => void;
-  error: string;
-  setError: (err: string) => void;
-}) => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+// ─────────────────────────────────────────────────────────────────────────────
+// Manual Google Sheets sync.
+//
+// The login form here was a copy of the one in components/admin/AdminGate, with
+// its own auth state on top. It is the shared gate now: same /api/login check,
+// same `admin-creds` credential, replayed on the POST to /api/sync-sheet.
+//
+// The result used to arrive as an alert(). A sync reports counts worth reading
+// twice ("Updated: 3. Appended: 11."), and an alert throws that away the moment
+// it is dismissed, so it is rendered on the page instead.
+// ─────────────────────────────────────────────────────────────────────────────
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!username || !password) {
-      setError('Username and Password are required.');
-      return;
-    }
-    setError('');
-    onLogin(username, password);
-  };
+export default function SyncPage() {
+  return <AdminGate title="Sync">{({ creds, logout }) => <SyncPanel creds={creds} logout={logout} />}</AdminGate>;
+}
 
-  return (
-    <div className="w-full max-w-sm p-8 0 backdrop-blur-md rounded-2xl border border-white/10 shadow-2xl shadow-[#e97bfc]/10">
-      <h2 className="text-2xl font-bold text-center text-white mb-6">Admin Verification</h2>
-      <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder="Username"
-          className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#f8c8fc] transition-all"
-        />
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Password"
-          className="w-full mt-4 bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#f8c8fc] transition-all"
-        />
-        {error && <p className="text-red-500 text-sm mt-2 text-center">{error}</p>}
-        <button
-          type="submit"
-          className="w-full mt-6 bg-[#e97bfc] text-black font-bold py-3 px-6 rounded-lg text-lg transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg hover:shadow-[#e97bfc]/50 active:scale-95"
-        >
-          Authenticate
-        </button>
-      </form>
-    </div>
-  );
-};
+type Status =
+  | { kind: 'idle' }
+  | { kind: 'ok'; message: string; at: string }
+  | { kind: 'error'; message: string }
+  /** The credential was rejected mid-session: it is cleared, so re-auth is the
+   *  only way forward and the sync button stays disabled until then. */
+  | { kind: 'expired' };
 
-const SyncButton = () => {
+function SyncPanel({ creds, logout }: { creds: string; logout: () => void }) {
   const [isLoading, setIsLoading] = useState(false);
+  const [status, setStatus] = useState<Status>({ kind: 'idle' });
 
   const handleSync = async () => {
     setIsLoading(true);
-    const creds = sessionStorage.getItem('admin-creds');
-
-    if (!creds) {
-      alert('Unauthorized: Please log in as admin.');
-      setIsLoading(false);
-      return;
-    }
+    setStatus({ kind: 'idle' });
 
     try {
       const response = await fetch('/api/sync-sheet', {
         method: 'POST',
-        headers: {
-          Authorization: creds,
-        },
+        headers: { Authorization: creds },
       });
 
       const data = await response.json();
 
       if (!response.ok) {
         if (response.status === 401) {
-          alert('Authentication failed. Please log in again.');
-          sessionStorage.removeItem('admin-creds');
-          window.location.reload();
+          clearStoredCreds();
+          setStatus({ kind: 'expired' });
         } else {
-          alert(`Sync failed: ${data.message || data.error || 'Unknown error'}`);
+          setStatus({
+            kind: 'error',
+            message: data.message || data.error || 'Unknown error',
+          });
         }
       } else {
-        alert(`${data.message || 'Data synced successfully!'}`);
+        setStatus({
+          kind: 'ok',
+          message: data.message || 'Data synced successfully!',
+          at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        });
       }
     } catch (error: unknown) {
-      if (error instanceof Error) {
-        alert('Sync failed: ' + error.message);
-      } else {
-        alert('Sync failed: ' + String(error));
-      }
+      setStatus({
+        kind: 'error',
+        message: error instanceof Error ? error.message : String(error),
+      });
     }
+
     setIsLoading(false);
   };
 
-  return (
-    <button
-      onClick={handleSync}
-      disabled={isLoading}
-      className="bg-blue-500 text-white px-4 py-2 rounded transition hover:bg-blue-600 disabled:opacity-50"
-    >
-      {isLoading ? 'Syncing...' : 'Sync to Google Sheets'}
-    </button>
-  );
-};
-
-export default function SyncPage() {
-  const [authCreds, setAuthCreds] = useState<string | null>(null);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    const storedCreds = sessionStorage.getItem('admin-creds');
-    if (storedCreds) {
-      setAuthCreds(storedCreds);
-    }
-  }, []);
-
-  const handleLogin = async (user: string, pass: string) => {
-    const creds = `Basic ${btoa(`${user}:${pass}`)}`;
-
-    try {
-      const res = await fetch('/api/login', {
-        headers: { Authorization: creds },
-      });
-      if (!res.ok) {
-        setError('Invalid username or password');
-        return;
-      }
-      setError('');
-      sessionStorage.setItem('admin-creds', creds);
-      setAuthCreds(creds);
-    } catch {
-      setError('Network error during authentication');
-    }
-  };
-
-  const handleLogout = () => {
-    sessionStorage.removeItem('admin-creds');
-    setAuthCreds(null);
-    setError('');
-  };
-
-  if (!authCreds) {
-    return (
-      <main className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-4">
-        <AdminLogin onLogin={handleLogin} error={error} setError={setError} />
-      </main>
-    );
-  }
+  const locked = status.kind === 'expired';
 
   return (
-    <main className="min-h-screen bg-gray-900 text-white p-8 relative">
-      <button
-        onClick={handleLogout}
-        className="absolute top-4 right-4 text-sm text-gray-300 hover:text-white transition-colors bg-black/30 px-3 py-2 rounded-lg backdrop-blur-sm border border-white/10"
-      >
-        Logout
-      </button>
+    <main className="min-h-screen text-white px-4 py-8 sm:px-6 sm:py-10">
+      <div className="mx-auto w-full max-w-2xl">
+        <header className="mb-7 flex flex-wrap items-start justify-between gap-4">
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Admin Controls</h1>
+          <button
+            onClick={logout}
+            className="inline-flex min-h-11 items-center rounded-lg border border-white/10 bg-white/5 px-4 text-sm font-medium text-gray-300 transition-colors hover:border-white/20 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f8c8fc]"
+          >
+            Logout
+          </button>
+        </header>
 
-      <h1 className="text-3xl font-bold mb-4">Admin Controls</h1>
-      <p className="mb-6 text-gray-400">
-        Click the button below to sync all registrations to your connected Google Sheet.
-      </p>
+        <section className="rounded-2xl border border-white/10 bg-black/30 p-5 backdrop-blur-md sm:p-7">
+          <h2 className="text-base font-semibold text-[#f8c8fc]">Google Sheets</h2>
+          <p className="mt-2 max-w-prose text-sm leading-relaxed text-gray-300">
+            Click the button below to sync all registrations to your connected Google Sheet.
+          </p>
 
-      <SyncButton />
+          <button
+            onClick={handleSync}
+            disabled={isLoading || locked}
+            className="mt-6 inline-flex min-h-11 items-center justify-center rounded-lg bg-[#e97bfc] px-5 py-3 font-bold text-black transition-[transform,box-shadow,opacity] duration-200 ease-out hover:shadow-lg hover:shadow-[#e97bfc]/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white active:scale-[0.99] disabled:opacity-50 disabled:active:scale-100"
+          >
+            {isLoading ? 'Syncing...' : 'Sync to Google Sheets'}
+          </button>
+
+          <div aria-live="polite" className="mt-5 empty:mt-0">
+            {status.kind === 'ok' && (
+              <div className="rounded-lg border border-[#e97bfc]/30 bg-[#e97bfc]/10 px-4 py-3">
+                <p className="text-sm text-[#f8c8fc]">{status.message}</p>
+                <p className="mt-1 text-xs text-gray-400">Last run at {status.at}</p>
+              </div>
+            )}
+
+            {status.kind === 'error' && (
+              <p
+                role="alert"
+                className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+              >
+                Sync failed: {status.message}
+              </p>
+            )}
+
+            {locked && (
+              <div
+                role="alert"
+                className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3"
+              >
+                <p className="text-sm text-red-300">
+                  Authentication failed. Please log in again.
+                </p>
+                <button
+                  onClick={logout}
+                  className="mt-3 inline-flex min-h-11 items-center rounded-lg border border-white/15 bg-white/5 px-4 text-sm font-medium text-white transition-colors hover:border-white/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f8c8fc]"
+                >
+                  Sign in again
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
     </main>
   );
 }

@@ -9,14 +9,20 @@ import type { Sku } from '@/lib/pricing/resolvePrice';
 // interacting. The inputs are `sr-only` and the card is the label, so the native
 // semantics survive intact while the card carries the styling.
 
-export const SKUS: Sku[] = ['capstone', 'single', 'bundle'];
+/**
+ * Display order, and it is deliberate.
+ *
+ * Cheapest-first put the capstone day — the narrowest option — in the position
+ * people read first. This runs entry (One Track) → the one we want chosen (Full
+ * Bundle, badged "Best value", sitting in the middle where the eye lands on a
+ * three-up row) → the add-on day last.
+ *
+ * Only the rendering below depends on this order. `SKUS.includes(...)` in
+ * RegistrationForm validates a restored draft and does not care.
+ */
+export const SKUS: Sku[] = ['single', 'bundle', 'capstone'];
 
 const COPY: Record<Sku, { title: string; when: string; blurb: string; badge?: string }> = {
-  capstone: {
-    title: 'Capstone Day',
-    when: '23 Sept',
-    blurb: 'Git & GitHub, building a portfolio, and shipping it on GitHub Pages.',
-  },
   single: {
     title: 'One Track',
     when: 'Both of its days',
@@ -28,6 +34,11 @@ const COPY: Record<Sku, { title: string; when: string; blurb: string; badge?: st
     blurb: 'One beginner track, one advanced track, and the capstone day included.',
     badge: 'Best value',
   },
+  capstone: {
+    title: 'Capstone Day',
+    when: '23 Sept',
+    blurb: 'Git & GitHub, building a portfolio, and shipping it on GitHub Pages.',
+  }
 };
 
 export default function SkuChooser({
