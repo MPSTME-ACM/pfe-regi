@@ -25,10 +25,20 @@ export async function POST(request: Request) {
         const registration = results[0];
 
         // 3. Handle Update or Fetch
-        if (attendance && Array.isArray(attendance)) {
-            // If attendance data is provided, update it
+        //
+        // Attendance is now a date-keyed map, not a positional boolean[3]: a
+        // capstone-only buyer attends one day and a bundle buyer attends five,
+        // so an index means nothing. Only keys the registration is actually
+        // entitled to are accepted — a scanner cannot invent a day.
+        if (attendance && typeof attendance === 'object' && !Array.isArray(attendance)) {
+            const entitled = Object.keys(registration.attendance);
+            const next: Record<string, boolean> = { ...registration.attendance };
+            for (const [date, present] of Object.entries(attendance as Record<string, unknown>)) {
+                if (entitled.includes(date)) next[date] = Boolean(present);
+            }
+
             await db.update(registrations)
-                .set({ attendance })
+                .set({ attendance: next })
                 .where(eq(registrations.orderId, orderId));
             
             const updatedResult = await db.select().from(registrations).where(eq(registrations.orderId, orderId));

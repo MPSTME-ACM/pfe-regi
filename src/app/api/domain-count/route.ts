@@ -1,65 +1,30 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { registrations } from '@/lib/db/schema';
-import { eq, count, and } from 'drizzle-orm';
+import { trackAvailability } from '@/lib/registration/capacity';
 
-const allDomains = ['C', 'Python', 'Web', 'DSA', 'AIML'];
-
-// Simple in-memory cache
-let cachedData: {
-  registrationAllowed: Record<string, boolean>;
-  timestamp: number;
-} | null = null;
-
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+/**
+ * Public track availability for the registration form.
+ *
+ * Kept at the old `/api/domain-count` path so a stale cached page does not 404;
+ * the payload is new. `registrationAllowed` is retained as a slug -> boolean map
+ * for the same reason.
+ *
+ * The 5-minute in-memory cache that used to live here is gone on purpose. It was
+ * per-container, so two instances disagreed, and its staleness is exactly why a
+ * student could pick a track the server then rejected as full. One grouped query
+ * over an indexed column is cheap enough to serve live.
+ */
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const now = Date.now();
-
-  // Serve cached response if it's still valid
-  if (cachedData && now - cachedData.timestamp < CACHE_DURATION) {
-    return NextResponse.json({
-      success: true,
-      registrationAllowed: cachedData.registrationAllowed,
-      cached: true,
-    });
-  }
-
   try {
-    const registrationAllowed: Record<string, boolean> = {};
-
-    for (const domain of allDomains) {
-      const domainCheckQuery = await db
-        .select({ count: count(registrations.id) })
-        .from(registrations)
-        .where(
-          and(
-            eq(registrations.domain, domain),
-            eq(registrations.paymentStatus, 'success')
-          )
-        );
-
-      const currentDomainCount = domainCheckQuery[0]?.count || 0;
-      registrationAllowed[domain] = currentDomainCount < 120;
-    }
-
-    // Save to cache
-    cachedData = {
-      registrationAllowed,
-      timestamp: now,
-    };
-
+    const tracks = await trackAvailability();
     return NextResponse.json({
       success: true,
-      registrationAllowed,
-      cached: false,
+      tracks,
+      registrationAllowed: Object.fromEntries(tracks.map((t) => [t.slug, !t.full])),
     });
-
   } catch (error) {
     console.error('[domain-count]', error);
-    return NextResponse.json(
-      { success: false, message: 'Internal Server Error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, message: 'Internal Server Error' }, { status: 500 });
   }
 }

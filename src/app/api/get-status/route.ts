@@ -40,7 +40,10 @@ export async function POST(request: Request) {
           const dbRecord = result[0];
           registrationDetails = {
             name: dbRecord.name,
-            domain: dbRecord.domain,
+            // 2026 replaces the single `domain` with a SKU plus up to three
+            // tracks. The phase 2 archive-fallback stream expands this into the
+            // resolved track names; `sku` keeps the page working meanwhile.
+            sku: dbRecord.sku,
             orderId: dbRecord.orderId,
             qrCodeUrl: dbRecord.qrCodeUrl
           }

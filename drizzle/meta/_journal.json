@@ -50,6 +50,20 @@
       "when": 1786255618691,
       "tag": "0006_absurd_zemo",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1786264407072,
+      "tag": "0007_add_2026_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1786264421562,
+      "tag": "0008_drop_legacy_domain",
+      "breakpoints": true
     }
   ]
 }

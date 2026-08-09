@@ -1,34 +1,43 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { registrations } from '@/lib/db/schema';
-import { eq, count, and, sql } from 'drizzle-orm';
+import { registrations, tracks } from '@/lib/db/schema';
+import { eq, count, inArray, sql } from 'drizzle-orm';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
+import {
+  CAPSTONE_SLUG,
+  OCCUPYING_STATUSES,
+  soldCapstone,
+  soldPerTrack,
+} from '@/lib/registration/capacity';
 
 export async function GET(request: Request) {
   try {
     const auth = requireAdmin(request);
     if (!auth.ok) return auth.response;
 
-    // 2. Domain-wise successful registrations
-    const allDomains = ['C', 'Python', 'Web', 'DSA', 'AIML'];
+    // 2. Track-wise seats sold.
+    //
+    // Was five sequential count() queries in a for-loop, one per domain. Seven
+    // tracks would have made it seven round trips. It is one grouped query now,
+    // and it counts `comped` alongside `success` — comps occupy a real seat, and
+    // 2025 hid them under `failure` which quietly skewed every percentage below.
+    const trackRows = await db.select().from(tracks).orderBy(tracks.sortOrder);
+    const ids = trackRows.filter((t) => t.slug !== CAPSTONE_SLUG).map((t) => t.id);
+    const sold = await soldPerTrack(db, ids);
+    const capstoneSold = await soldCapstone(db);
+
     const domainStats: Record<string, number> = {};
-    let totalSuccess = 0;
-
-    for (const domain of allDomains) {
-      const result = await db
-        .select({ count: count(registrations.id) })
-        .from(registrations)
-        .where(
-          and(
-            eq(registrations.domain, domain),
-            eq(registrations.paymentStatus, "success")
-          )
-        );
-
-      const domainCount = Number(result[0]?.count || 0);
-      domainStats[domain] = domainCount;
-      totalSuccess += domainCount;
+    for (const t of trackRows) {
+      domainStats[t.name] = t.slug === CAPSTONE_SLUG ? capstoneSold : (sold.get(t.id) ?? 0);
     }
+
+    // Registrations, not seats: a bundle occupies three track seats but is one
+    // person, so summing domainStats would triple-count them.
+    const [successRow] = await db
+      .select({ count: count(registrations.id) })
+      .from(registrations)
+      .where(inArray(registrations.paymentStatus, [...OCCUPYING_STATUSES]));
+    const totalSuccess = Number(successRow?.count || 0);
 
     // 3. Total registrations (all statuses)
     const totalRes = await db
