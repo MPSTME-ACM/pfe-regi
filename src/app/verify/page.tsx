@@ -1,74 +1,56 @@
 "use client"
-import type React from "react"
-import { useState, useEffect, Suspense } from "react"
-// Use a type-only import to satisfy TypeScript without affecting the runtime
+
+import { useCallback, useEffect, useMemo, useState } from "react"
+// Type-only import: html5-qrcode is loaded lazily so it never lands in the
+// initial bundle for a screen that spends most of its life showing one ticket.
 import type { Html5QrcodeScanner, QrcodeSuccessCallback } from "html5-qrcode"
+import AdminGate from "@/components/admin/AdminGate"
 
-// --- Type Definitions ---
-interface RegistrationDetails {
+// ─────────────────────────────────────────────────────────────────────────────
+// The door scanner.
+//
+// Used one-handed, on a phone, in a queue. Every control is a full-width target,
+// the verdict is a colour you can read at arm's length, and nothing important is
+// behind a scroll.
+//
+// Attendance is per DATE, not per array slot: the checkboxes are exactly the days
+// this registration bought. 2025 tickets still resolve, and are read-only.
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface TicketDay {
+  key: string
+  label: string
+  present: boolean
+}
+
+interface TicketView {
+  edition: 2025 | 2026
+  readOnly: boolean
   name: string
-  domain: string
   orderId: string
-  attendance: boolean[]
-  year: string
-  course: string
+  course: string | null
+  year: string | null
+  department: string | null
+  description: string
+  sku: string | null
+  paymentStatus: string | null
+  qrCodeUrl: string | null
+  days: TicketDay[]
 }
 
-// --- Admin Login Component ---
-const AdminLogin = ({
-  onLogin,
-  error,
-  setError,
-}: { onLogin: (user: string, pass: string) => void; error: string; setError: (err: string) => void }) => {
-  const [username, setUsername] = useState("")
-  const [password, setPassword] = useState("")
+const PAID_STATUSES = ["success", "comped"]
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!username || !password) {
-      setError("Username and Password are required.")
-      return
-    }
-    setError("")
-    onLogin(username, password)
-  }
+const CARD = "w-full bg-black/30 backdrop-blur-md rounded-2xl border border-white/10"
 
-  return (
-    <div className="w-full max-w-sm p-8 bg-black/50 backdrop-blur-md rounded-2xl border border-white/10 shadow-2xl shadow-[#e97bfc]/10">
-      <h2 className="text-2xl font-bold text-center text-white mb-6">Admin Verification</h2>
-      <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder="Username"
-          className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#f8c8fc] transition-all"
-        />
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Password"
-          className="w-full mt-4 bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#f8c8fc] transition-all"
-        />
-        {error && <p className="text-red-500 text-sm mt-2 text-center">{error}</p>}
-        <button
-          type="submit"
-          className="w-full mt-6 bg-[#e97bfc] text-black font-bold py-3 px-6 rounded-lg text-lg transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg hover:shadow-[#e97bfc]/50 active:scale-95"
-        >
-          Authenticate
-        </button>
-      </form>
-    </div>
-  )
-}
+// --- QR Code Scanner ---------------------------------------------------------
 
-// --- QR Code Scanner Component ---
 const QrScanner = ({
   onScanSuccess,
-  onScanError,
   onStop,
-}: { onScanSuccess: QrcodeSuccessCallback; onScanError: (error: string) => void; onStop: () => void }) => {
+}: {
+  onScanSuccess: QrcodeSuccessCallback
+  onStop: () => void
+}) => {
   useEffect(() => {
     let scanner: Html5QrcodeScanner | null = null
 
@@ -85,7 +67,9 @@ const QrScanner = ({
           },
           false,
         )
-        scanner.render(onScanSuccess, onScanError)
+        scanner.render(onScanSuccess, () => {
+          // Fires on every frame without a QR in it. Nothing to report.
+        })
       })
       .catch((err: unknown) => {
         console.error("Failed to load Html5QrcodeScanner", err)
@@ -96,296 +80,389 @@ const QrScanner = ({
         scanner.clear().catch((error: unknown) => console.error("Failed to clear scanner.", error))
       }
     }
-  }, [onScanSuccess, onScanError])
+  }, [onScanSuccess])
 
   return (
-    <div className="w-full max-w-md p-6 bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 shadow-2xl shadow-[#e97bfc]/10">
-      <h3 className="text-lg font-semibold text-white mb-2 text-center">Scan QR Code</h3>
-      <p className="text-center text-gray-400 text-sm mb-4">Align the ticket QR inside the square.</p>
+    <div className={`${CARD} p-4 sm:p-6`}>
+      <h2 className="text-lg font-semibold text-[#f8c8fc] mb-1 text-center">Scan ticket</h2>
+      <p className="text-center text-gray-400 text-sm mb-4">Align the QR inside the square.</p>
       <div
         id="reader"
         className="w-full bg-white/5 rounded-xl overflow-hidden border border-white/15"
         aria-label="QR code scanner"
       />
-      <div className="w-full text-center">
-        <button
-          onClick={onStop}
-          className="mt-6 w-full text-white font-medium py-3 px-4 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-[#f8c8fc]/60 transition"
-          aria-label="Close scanner"
-        >
-          Close Scanner
-        </button>
-      </div>
-
-      <style jsx global>{`
-                /* Scanner control cleanup with brand accent (#e97bfc) */
-                #reader {
-                    padding: 10px;
-                }
-                #reader button,
-                #reader a,
-                #reader select {
-                    font-size: 14px;
-                    border-radius: 12px !important;
-                    padding: 10px 14px !important;
-                    min-height: 44px;
-                    min-width: 44px;
-                    line-height: 1;
-                    color: #fff !important;
-                    background: rgba(255, 255, 255, 0.06) !important;
-                    border: 1px solid rgba(255, 255, 255, 0.15) !important;
-                    display: inline-flex !important;
-                    align-items: center;
-                    gap: 8px;
-                    text-decoration: none !important;
-                    cursor: pointer;
-                }
-                #reader button:hover,
-                #reader a:hover {
-                    background: rgba(233, 123, 252, 0.12) !important;
-                    border-color: rgba(233, 123, 252, 0.45) !important;
-                }
-                #reader .html5-qrcode-anchor-scan-type-change {
-                    margin-top: 8px !important;
-                    margin-right: 8px !important;
-                }
-                #reader select {
-                    width: 100% !important;
-                }
-                /* tighten dashboard spacing a bit while keeping touch targets large */
-                #reader__dashboard_section_csr,
-                #reader__dashboard_section {
-                    gap: 12px;
-                }
-            `}</style>
-    </div>
-  )
-}
-
-// --- Verification Details Display Component ---
-const VerificationDisplay = ({ orderId, authCreds }: { orderId: string; authCreds: string }) => {
-  const [details, setDetails] = useState<RegistrationDetails | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
-  const [attendance, setAttendance] = useState<boolean[]>([])
-
-  useEffect(() => {
-    const fetchDetails = async () => {
-      try {
-        const response = await fetch("/api/verify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: authCreds },
-          body: JSON.stringify({ orderId }),
-        })
-        if (!response.ok) {
-          const data = await response.json()
-          throw new Error(data.message || "Ticket not found.")
-        }
-        const data = await response.json()
-        if (data.success) {
-          setDetails(data.details)
-          setAttendance(data.details.attendance)
-        } else {
-          setError(data.message)
-        }
-      } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : "An unknown error occurred.")
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchDetails()
-  }, [orderId, authCreds])
-
-  const handleAttendanceChange = (dayIndex: number) => {
-    const newAttendance = [...attendance]
-    newAttendance[dayIndex] = !newAttendance[dayIndex]
-    setAttendance(newAttendance)
-  }
-
-  const handleSaveAttendance = async () => {
-    try {
-      const response = await fetch("/api/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: authCreds },
-        body: JSON.stringify({ orderId, attendance }),
-      })
-      if (!response.ok) throw new Error("Failed to save attendance.")
-      alert("Attendance updated successfully!")
-    } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "An error occurred.")
-    }
-  }
-
-  if (loading)
-    return (
-      <div className="w-12 h-12 border-4 border-dashed rounded-full animate-spin border-[#e97bfc] [animation-duration:2s]"></div>
-    )
-  if (error) return <p className="text-2xl text-red-500">{error}</p>
-  if (!details) return <p className="text-2xl text-yellow-500">No details found.</p>
-
-  return (
-    <div className="w-full max-w-md p-8 bg-black/50 backdrop-blur-md rounded-2xl border border-pink-500/30 text-center progress-glow-container">
-      <h1 className="text-2xl font-bold text-green-400 mb-4">Ticket Verified</h1>
-      <div className="text-left space-y-3 my-6 border-y border-dashed border-gray-700 py-6">
-        <p>
-          <span className="font-semibold text-gray-400 w-24 inline-block">Name:</span> {details.name}
-        </p>
-        <p>
-          <span className="font-semibold text-gray-400 w-24 inline-block">Domain:</span> {details.domain}
-        </p>
-        <p>
-          <span className="font-semibold text-gray-400 w-24 inline-block">Details:</span> {details.year},{" "}
-          {details.course}
-        </p>
-        <p>
-          <span className="font-semibold text-gray-400 w-24 inline-block">Order ID:</span> {details.orderId}
-        </p>
-      </div>
-      <div>
-        <h2 className="text-xl font-bold mb-4">Mark Attendance</h2>
-        <div className="flex justify-around">
-          {[...Array(3)].map((_, index) => (
-            <div key={index} className="flex flex-col items-center gap-2">
-              <label htmlFor={`day-${index}`} className="text-gray-300">
-                Day {index + 1}
-              </label>
-              <input
-                type="checkbox"
-                id={`day-${index}`}
-                checked={attendance[index] || false}
-                onChange={() => handleAttendanceChange(index)}
-                className="w-6 h-6 md:w-7 md:h-7 rounded text-[#e97bfc] bg-gray-700 border-gray-600 focus:ring-2 focus:ring-[#f8c8fc]/60 cursor-pointer"
-              />
-            </div>
-          ))}
-        </div>
-        <button
-          onClick={handleSaveAttendance}
-          className="w-full mt-8 bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition-colors"
-        >
-          Save Attendance
-        </button>
-      </div>
-    </div>
-  )
-}
-
-// --- Main Page Content Logic ---
-const VerifyPageContent = () => {
-  const [authCreds, setAuthCreds] = useState<string | null>(null)
-  const [error, setError] = useState("")
-  const [orderId, setOrderId] = useState<string | null>(null)
-  const [isScanning, setIsScanning] = useState(false)
-
-  useEffect(() => {
-    const storedCreds = sessionStorage.getItem("admin-creds")
-    if (storedCreds) {
-      setAuthCreds(storedCreds)
-    }
-    const params = new URLSearchParams(window.location.search)
-    const id = params.get("orderId")
-    if (id) {
-      setOrderId(id)
-    }
-  }, [])
-
-  const handleLogin = async (user: string, pass: string) => {
-    const creds = `Basic ${btoa(`${user}:${pass}`)}`;
-
-    try {
-      const res = await fetch('/api/login', {
-        headers: { Authorization: creds },
-      });
-      if (!res.ok) {
-        setError('Invalid username or password');
-        return;
-      }
-      setError('');
-      sessionStorage.setItem('admin-creds', creds);
-      setAuthCreds(creds);
-    } catch {
-      setError('Network error during authentication');
-    }
-  };
-
-  const handleLogout = () => {
-    sessionStorage.removeItem("admin-creds")
-    setAuthCreds(null)
-    setError("")
-    window.history.pushState({}, "", "/verify")
-    setOrderId(null)
-  }
-
-  const onScanSuccess: QrcodeSuccessCallback = (decodedText) => {
-    try {
-      const url = new URL(decodedText)
-      const id = url.searchParams.get("orderId")
-      if (id) {
-        // Use window.history to change URL without a full page reload,
-        // triggering the details fetch.
-        window.history.pushState({}, "", `/verify?orderId=${id}`)
-        setOrderId(id)
-      } else {
-        throw new Error("No orderId found in QR code.")
-      }
-    } catch (err: unknown) {
-      console.error("QR Scan Error:", err)
-      alert("Invalid QR Code. Please scan a valid PFE Ticket.")
-    }
-    setIsScanning(false)
-  }
-
-  // FIX: Explicitly type the error message parameter as a string
-  const onScanError = (errorMessage: string) => {
-    console.error(errorMessage);
-    // This callback is required but we can choose to ignore minor errors.
-  }
-
-  if (!authCreds) {
-    return <AdminLogin onLogin={handleLogin} error={error} setError={setError} />
-  }
-
-  return (
-    <div className="relative w-full max-w-md flex flex-col items-center">
       <button
-        onClick={handleLogout}
-        className="fixed top-4 right-4 z-50 text-sm text-gray-300 hover:text-white transition-colors bg-black/30 px-3 py-2 rounded-lg backdrop-blur-sm border border-white/10 focus:outline-none focus:ring-2 focus:ring-[#f8c8fc]/60"
+        onClick={onStop}
+        className="mt-5 w-full min-h-14 text-white font-semibold rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-[#f8c8fc]/60 transition"
       >
-        Logout
+        Cancel
       </button>
 
-      {isScanning ? (
-        <QrScanner onScanSuccess={onScanSuccess} onScanError={onScanError} onStop={() => setIsScanning(false)} />
-      ) : orderId ? (
-        <VerificationDisplay orderId={orderId} authCreds={authCreds} />
-      ) : (
-        <div className="text-center p-8 bg-black/50 backdrop-blur-md rounded-2xl border border-white/10">
-          <h1 className="text-3xl font-bold text-white mb-2">Ready to Verify</h1>
-          <p className="text-gray-400">Click the button below to start scanning.</p>
-        </div>
-      )}
+      <style jsx global>{`
+        #reader {
+          padding: 10px;
+        }
+        #reader button,
+        #reader a,
+        #reader select {
+          font-size: 15px;
+          border-radius: 12px !important;
+          padding: 12px 14px !important;
+          min-height: 48px;
+          min-width: 48px;
+          line-height: 1;
+          color: #fff !important;
+          background: rgba(255, 255, 255, 0.06) !important;
+          border: 1px solid rgba(255, 255, 255, 0.15) !important;
+          display: inline-flex !important;
+          align-items: center;
+          gap: 8px;
+          text-decoration: none !important;
+          cursor: pointer;
+        }
+        #reader button:hover,
+        #reader a:hover {
+          background: rgba(233, 123, 252, 0.12) !important;
+          border-color: rgba(233, 123, 252, 0.45) !important;
+        }
+        #reader .html5-qrcode-anchor-scan-type-change {
+          margin-top: 8px !important;
+          margin-right: 8px !important;
+        }
+        #reader select {
+          width: 100% !important;
+        }
+        #reader__dashboard_section_csr,
+        #reader__dashboard_section {
+          gap: 12px;
+        }
+      `}</style>
+    </div>
+  )
+}
 
-      {!isScanning && (
-        <button
-          onClick={() => setIsScanning(true)}
-          className="mt-8 w-full bg-[#e97bfc] text-black font-semibold py-3.5 px-6 rounded-xl shadow-lg shadow-[#e97bfc]/30 hover:shadow-[#e97bfc]/40 transition focus:outline-none focus:ring-2 focus:ring-[#f8c8fc]/70 active:translate-y-px"
-          aria-label="Start scanning next ticket"
-        >
-          Scan Next Ticket
-        </button>
+// --- Verdict banner ----------------------------------------------------------
+// The one thing that must be readable at arm's length in a queue.
+
+const Verdict = ({ ticket }: { ticket: TicketView }) => {
+  if (ticket.edition === 2025) {
+    return (
+      <div className="rounded-xl bg-amber-500/15 border border-amber-400/50 px-4 py-4 text-center">
+        <p className="text-xl font-extrabold text-amber-300 tracking-wide">2025 REGISTRATION</p>
+        <p className="text-sm text-amber-200/80 mt-1">Archived ticket &middot; read-only</p>
+      </div>
+    )
+  }
+
+  const paid = PAID_STATUSES.includes(ticket.paymentStatus ?? "")
+  if (!paid) {
+    return (
+      <div className="rounded-xl bg-red-500/20 border border-red-400/60 px-4 py-4 text-center">
+        <p className="text-2xl font-extrabold text-red-300 tracking-wide">NOT PAID</p>
+        <p className="text-sm text-red-200/80 mt-1">
+          Payment status: {ticket.paymentStatus ?? "unknown"} &middot; do not admit
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="rounded-xl bg-green-500/15 border border-green-400/50 px-4 py-4 text-center">
+      <p className="text-2xl font-extrabold text-green-300 tracking-wide">VALID TICKET</p>
+      {ticket.paymentStatus === "comped" && (
+        <p className="text-sm text-green-200/80 mt-1">Comped registration</p>
       )}
     </div>
   )
 }
 
-// --- Main Page Component ---
-export default function VerifyPage() {
+// --- Ticket + attendance -----------------------------------------------------
+
+const TicketPanel = ({
+  orderId,
+  creds,
+  onScanNext,
+}: {
+  orderId: string
+  creds: string
+  onScanNext: () => void
+}) => {
+  const [ticket, setTicket] = useState<TicketView | null>(null)
+  const [days, setDays] = useState<TicketDay[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError("")
+    setSaved(false)
+
+    const run = async () => {
+      try {
+        const res = await fetch("/api/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: creds },
+          body: JSON.stringify({ orderId }),
+        })
+        const data = await res.json()
+        if (cancelled) return
+        if (!res.ok || !data.success) {
+          setError(data.message || "Ticket not found.")
+          return
+        }
+        setTicket(data.details)
+        setDays(data.details.days ?? [])
+      } catch (err: unknown) {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Network error.")
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    run()
+    return () => {
+      cancelled = true
+    }
+  }, [orderId, creds])
+
+  const dirty = useMemo(
+    () => !!ticket && days.some((d, i) => d.present !== (ticket.days[i]?.present ?? false)),
+    [days, ticket],
+  )
+
+  const toggle = (key: string) => {
+    setSaved(false)
+    setDays((prev) => prev.map((d) => (d.key === key ? { ...d, present: !d.present } : d)))
+  }
+
+  const save = async () => {
+    if (!ticket || ticket.readOnly) return
+    setSaving(true)
+    setError("")
+    try {
+      const attendance = Object.fromEntries(days.map((d) => [d.key, d.present]))
+      const res = await fetch("/api/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: creds },
+        body: JSON.stringify({ orderId, attendance }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) throw new Error(data.message || "Failed to save attendance.")
+      setTicket(data.details)
+      setDays(data.details.days ?? [])
+      setSaved(true)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to save attendance.")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className={`${CARD} p-10 flex flex-col items-center gap-4`}>
+        <div className="w-12 h-12 border-4 border-dashed rounded-full animate-spin border-[#e97bfc] [animation-duration:2s]" />
+        <p className="text-gray-400">Looking up ticket…</p>
+      </div>
+    )
+  }
+
+  if (error && !ticket) {
+    return (
+      <div className={`${CARD} p-6 text-center`}>
+        <div className="rounded-xl bg-red-500/20 border border-red-400/60 px-4 py-5">
+          <p className="text-2xl font-extrabold text-red-300 tracking-wide">NOT FOUND</p>
+          <p className="text-sm text-red-200/80 mt-2">{error}</p>
+        </div>
+        <p className="text-xs text-gray-500 font-mono mt-4 break-all">{orderId}</p>
+      </div>
+    )
+  }
+
+  if (!ticket) return null
+
   return (
-    <main className="min-h-screen bg-transparent text-white flex items-center justify-center p-4 font-sans">
-      <Suspense fallback={<div className="text-2xl">Loading...</div>}>
-        <VerifyPageContent />
-      </Suspense>
+    <div className={`${CARD} p-4 sm:p-6 space-y-5`}>
+      <Verdict ticket={ticket} />
+
+      <div className="space-y-2">
+        <p className="text-2xl font-bold text-white leading-tight break-words">{ticket.name}</p>
+        <p className="text-[#f8c8fc] font-medium">{ticket.description}</p>
+        <p className="text-sm text-gray-400">
+          {[ticket.year, ticket.course, ticket.department].filter(Boolean).join(" · ") || "—"}
+        </p>
+        <p className="text-xs text-gray-500 font-mono break-all pt-1">{ticket.orderId}</p>
+      </div>
+
+      <div className="border-t border-white/10 pt-5">
+        <h2 className="text-lg font-semibold text-white mb-1">Mark attendance</h2>
+        <p className="text-sm text-gray-500 mb-3">
+          {ticket.readOnly
+            ? "Archived 2025 record. Attendance cannot be changed."
+            : `${ticket.days.length} ${ticket.days.length === 1 ? "day" : "days"} on this ticket.`}
+        </p>
+
+        <div className="space-y-3">
+          {days.length === 0 && (
+            <p className="text-sm text-gray-500">No attendance days on this registration.</p>
+          )}
+          {days.map((day) => (
+            <label
+              key={day.key}
+              className={`flex items-center gap-4 min-h-16 px-4 rounded-xl border transition-colors ${
+                ticket.readOnly
+                  ? "border-white/10 bg-white/5 opacity-70 cursor-not-allowed"
+                  : day.present
+                    ? "border-green-400/60 bg-green-500/15 cursor-pointer"
+                    : "border-white/20 bg-white/5 cursor-pointer active:bg-white/10"
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={day.present}
+                disabled={ticket.readOnly}
+                onChange={() => toggle(day.key)}
+                className="w-7 h-7 shrink-0 rounded accent-[#e97bfc] bg-white/10 border-white/30 focus:outline-none focus:ring-2 focus:ring-[#f8c8fc]/70 disabled:cursor-not-allowed"
+              />
+              <span className="flex-1 text-lg font-semibold text-white">{day.label}</span>
+              <span
+                className={`text-sm font-semibold ${day.present ? "text-green-300" : "text-gray-500"}`}
+              >
+                {day.present ? "Present" : "Absent"}
+              </span>
+            </label>
+          ))}
+        </div>
+
+        {error && ticket && <p className="text-red-400 text-sm mt-3">{error}</p>}
+        {saved && !dirty && (
+          <p className="mt-3 rounded-lg bg-green-500/15 border border-green-400/40 text-green-300 text-center font-semibold py-3">
+            Attendance saved
+          </p>
+        )}
+
+        {!ticket.readOnly && (
+          <button
+            onClick={save}
+            disabled={saving || !dirty}
+            className="w-full mt-4 min-h-14 bg-green-600 text-white text-lg font-bold rounded-xl hover:bg-green-500 focus:outline-none focus:ring-2 focus:ring-green-300/70 transition-colors disabled:opacity-40 disabled:hover:bg-green-600"
+          >
+            {saving ? "Saving…" : dirty ? "Save attendance" : "No changes"}
+          </button>
+        )}
+      </div>
+
+      <button
+        onClick={onScanNext}
+        className="w-full min-h-14 bg-[#e97bfc] text-black text-lg font-bold rounded-xl shadow-lg shadow-[#e97bfc]/30 focus:outline-none focus:ring-2 focus:ring-[#f8c8fc]/70 active:translate-y-px transition"
+      >
+        Scan next ticket
+      </button>
+    </div>
+  )
+}
+
+// --- Screen ------------------------------------------------------------------
+
+/** Ticket QRs encode a /verify?orderId=… URL. Accept a bare id too, in case a
+ *  reprinted or hand-typed code arrives without the URL around it. */
+function orderIdFromScan(text: string): string | null {
+  try {
+    const id = new URL(text).searchParams.get("orderId")
+    if (id) return id
+  } catch {
+    // Not a URL. Fall through.
+  }
+  const bare = text.trim()
+  return /^[A-Za-z0-9_-]{4,256}$/.test(bare) ? bare : null
+}
+
+const VerifyScreen = ({ creds, logout }: { creds: string; logout: () => void }) => {
+  const [orderId, setOrderId] = useState<string | null>(null)
+  const [scanning, setScanning] = useState(false)
+  const [scanError, setScanError] = useState("")
+
+  // A 2026 or 2025 QR opens this page directly with ?orderId=…
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("orderId")
+    if (id) setOrderId(id)
+  }, [])
+
+  const openTicket = useCallback((id: string) => {
+    window.history.pushState({}, "", `/verify?orderId=${encodeURIComponent(id)}`)
+    setOrderId(id)
+  }, [])
+
+  const onScanSuccess = useCallback<QrcodeSuccessCallback>(
+    (decodedText) => {
+      const id = orderIdFromScan(decodedText)
+      if (!id) {
+        setScanError("That is not a PFE ticket QR code.")
+        return
+      }
+      setScanError("")
+      setScanning(false)
+      openTicket(id)
+    },
+    [openTicket],
+  )
+
+  const scanNext = () => {
+    window.history.pushState({}, "", "/verify")
+    setOrderId(null)
+    setScanError("")
+    setScanning(true)
+  }
+
+  return (
+    <main className="min-h-screen text-white px-4 py-4 font-sans">
+      <div className="w-full max-w-md mx-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-xl font-bold text-[#f8c8fc]">PFE Door Check</h1>
+          <button
+            onClick={() => {
+              window.history.pushState({}, "", "/verify")
+              setOrderId(null)
+              logout()
+            }}
+            className="min-h-11 px-4 text-sm text-gray-300 hover:text-white bg-black/30 rounded-lg border border-white/10 focus:outline-none focus:ring-2 focus:ring-[#f8c8fc]/60 transition"
+          >
+            Log out
+          </button>
+        </div>
+
+        {scanError && (
+          <p className="mb-4 rounded-lg bg-red-500/20 border border-red-400/50 text-red-300 text-center font-semibold py-3">
+            {scanError}
+          </p>
+        )}
+
+        {scanning ? (
+          <QrScanner onScanSuccess={onScanSuccess} onStop={() => setScanning(false)} />
+        ) : orderId ? (
+          <TicketPanel orderId={orderId} creds={creds} onScanNext={scanNext} />
+        ) : (
+          <div className={`${CARD} p-6 text-center`}>
+            <h2 className="text-2xl font-bold text-white mb-2">Ready to verify</h2>
+            <p className="text-gray-400 mb-6">Scan a ticket QR to check it in.</p>
+            <button
+              onClick={() => {
+                setScanError("")
+                setScanning(true)
+              }}
+              className="w-full min-h-14 bg-[#e97bfc] text-black text-lg font-bold rounded-xl shadow-lg shadow-[#e97bfc]/30 focus:outline-none focus:ring-2 focus:ring-[#f8c8fc]/70 active:translate-y-px transition"
+            >
+              Start scanning
+            </button>
+          </div>
+        )}
+      </div>
     </main>
   )
+}
+
+export default function VerifyPage() {
+  return <AdminGate title="Admin Verification">{({ creds, logout }) => <VerifyScreen creds={creds} logout={logout} />}</AdminGate>
 }

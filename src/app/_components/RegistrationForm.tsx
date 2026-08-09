@@ -1,21 +1,31 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import PolicyLinks from './PolicyLinks';
 import ProgramHeader from './ProgramHeader';
+import { InputField, SelectField, type SelectOption } from './FormFields';
+import SkuChooser, { SKUS } from './SkuChooser';
+import TrackFields, { type TrackFieldName } from './TrackFields';
+import { type TrackOption } from './registrationTypes';
 import type { EventConfig, FieldOptions } from '@/lib/db/schema';
+import type { Sku } from '@/lib/pricing/resolvePrice';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// The public registration form. Lifted out of the old `page.save.tsx`, which was
-// swapped in and out by renaming files; the page is now rendered or not by the
-// `registrationOpen` setting instead.
+// The public registration form, 2026 model.
 //
-// Phase 1 kept the 2025 field set intact so that flipping the switch reproduces
-// exactly what the rename used to do. The domain list below is still hardcoded
-// to match the validation in api/create-order — phase 2 replaces both with the
-// `tracks` table (7 tracks, 3 SKUs).
+// 2025 posted a flat `formData` blob with a single `domain` field. That shape is
+// now rejected outright by api/create-order, so the body is built explicitly
+// from the chosen SKU instead of being stringified wholesale. That is not
+// tidiness — `resolveSelection` rejects a capstone order that carries any track
+// slug, and a single-track order that carries two. Both of those are what a
+// stringified blob produces the moment someone picks bundle, fills the selects,
+// then switches to capstone.
+//
+// Nothing here may import a runtime value from `@/lib/settings` or
+// `@/lib/registration/capacity`: both reach `@/lib/db` and would pull drizzle and
+// node-postgres into the browser bundle. Type-only imports are fine (they erase).
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface CheckoutResult {
@@ -33,133 +43,141 @@ interface CashfreeSDK {
   checkout(options: CheckoutOptions): Promise<CheckoutResult>;
 }
 
-interface InputFieldProps {
-  label: string;
-  type: string;
-  placeholder: string;
-  error?: string;
+/** The draft that is mirrored into sessionStorage. */
+interface Draft {
   name: string;
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  required?: boolean;
+  email: string;
+  contact: string;
+  college: string;
+  course: string;
+  department: string;
+  year: string;
+  referral: string;
+  sku: Sku | '';
+  /** Slug chosen for the `single` SKU — routed to the right key at submit time. */
+  singleTrack: string;
+  beginnerTrack: string;
+  advancedTrack: string;
 }
 
-const InputField: React.FC<InputFieldProps> = ({ label, type, placeholder, name, value, onChange, required = false, error }) => (
-  <div className="mb-6">
-    <label htmlFor={name} className="block text-sm font-medium text-gray-300 mb-2">
-      {label} {required && <span className="text-[#e97bfc]">*</span>}
-    </label>
-    <input
-      type={type}
-      id={name}
-      name={name}
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-      required={required}
-      className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#f8c8fc] transition-all duration-300 autofill:!bg-white/5"
-    />
-    {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
-  </div>
-);
+const EMPTY_DRAFT: Draft = {
+  name: '', email: '', contact: '', college: '', course: '', department: '', year: '',
+  referral: '', sku: '', singleTrack: '', beginnerTrack: '', advancedTrack: '',
+};
 
-interface SelectFieldProps {
-  label: string;
-  name: string;
-  options: string[];
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
-  required?: boolean;
-  domainStatus?: Record<string, boolean>;
+const DRAFT_KEY = 'pfe-form-data';
+
+/** The college value that switches Course and Department to free text. */
+const OTHER_COLLEGE = 'Other';
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const CONTACT_RE = /^[6-9]\d{9}$/;
+
+/** Everything except `referral`, which is optional and must not count towards
+ *  the completion ring. Track fields are added per SKU by `requiredFor`. */
+const BASE_REQUIRED = [
+  'name', 'email', 'contact', 'college', 'course', 'department', 'year', 'sku',
+] as const satisfies readonly (keyof Draft)[];
+
+function requiredFor(sku: Sku | ''): (keyof Draft)[] {
+  if (sku === 'single') return [...BASE_REQUIRED, 'singleTrack'];
+  if (sku === 'bundle') return [...BASE_REQUIRED, 'beginnerTrack', 'advancedTrack'];
+  return [...BASE_REQUIRED];
 }
 
-const SelectField: React.FC<SelectFieldProps> = ({ label, name, options, value, onChange, required = false, domainStatus }) => (
-  <div className="mb-6">
-    <label htmlFor={name} className="block text-sm font-medium text-gray-300 mb-2">
-      {label} {required && <span className="text-[#e97bfc]">*</span>}
-    </label>
-    <select
-      id={name}
-      name={name}
-      value={value}
-      onChange={onChange}
-      required={required}
-      className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#f8c8fc] appearance-none"
-      style={{
-        backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23f8c8fc' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-        backgroundPosition: 'right 0.5rem center',
-        backgroundRepeat: 'no-repeat',
-        backgroundSize: '1.5em 1.5em',
-        paddingRight: '2.5rem',
-      }}
-    >
-      <option value="" disabled>Select your option</option>
-      {options.map((option) => {
-        const isAllowed = name === 'domain' && domainStatus ? domainStatus[option] ?? true : true;
-        return (
-          <option
-            key={option}
-            value={option}
-            disabled={!isAllowed}
-            className="bg-[#1a0d1f] text-white disabled:text-gray-500"
-          >
-            {option}{!isAllowed ? ' (Full)' : ''}
-          </option>
-        );
-      })}
-    </select>
-  </div>
-);
+/**
+ * Rebuild a draft from whatever sessionStorage happens to hold.
+ *
+ * Whitelisted key by key rather than spread: a 2025 draft carries `domain`, and
+ * a stale one carries a track that has since filled up. Restoring either would
+ * hand the server a payload it rejects, which is exactly the failure this stream
+ * exists to remove. A slug that is unknown or full comes back empty so the user
+ * re-picks from a list where it is visibly disabled.
+ */
+function restoreDraft(raw: string, tracks: TrackOption[]): Draft | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (typeof parsed !== 'object' || parsed === null) return null;
+  const record = parsed as Record<string, unknown>;
 
-// Everything except `referral`, which is optional and must not count towards the
-// completion ring. Module scope so the effect below has an honest dep array.
-const REQUIRED_FIELDS = ['name', 'email', 'contact', 'course', 'department', 'year', 'domain'] as const;
+  const str = (key: string) => (typeof record[key] === 'string' ? (record[key] as string) : '');
+  const slug = (key: string) => {
+    const value = str(key);
+    const track = tracks.find((t) => t.slug === value);
+    return track && !track.full ? value : '';
+  };
+
+  return {
+    name: str('name'),
+    email: str('email'),
+    contact: str('contact'),
+    college: str('college'),
+    course: str('course'),
+    department: str('department'),
+    year: str('year'),
+    referral: str('referral'),
+    sku: SKUS.includes(record.sku as Sku) ? (record.sku as Sku) : '',
+    singleTrack: slug('singleTrack'),
+    beginnerTrack: slug('beginnerTrack'),
+    advancedTrack: slug('advancedTrack'),
+  };
+}
+
+const toOptions = (values: string[]): SelectOption[] =>
+  values.map((value) => ({ value, label: value }));
 
 export default function RegistrationForm({
   eventConfig,
   fieldOptions,
-  priceLabel,
+  tracks: initialTracks,
+  priceLabels,
   cashfreeMode,
   merchantName,
   merchantEmail,
 }: {
   eventConfig: EventConfig;
   fieldOptions: FieldOptions;
-  priceLabel: string;
+  /** Server-rendered availability, so the selects are correct on first paint. */
+  tracks: TrackOption[];
+  /** Display only. The server computes and stores the real amount. */
+  priceLabels: Record<Sku, string>;
   /** Driven by CASHFREE_ENV on the server. Was hardcoded to "production", which
    *  made it impossible to test a real checkout against the sandbox. */
   cashfreeMode: 'sandbox' | 'production';
   merchantName: string;
   merchantEmail: string;
 }) {
-  const [formData, setFormData] = useState({
-    name: '', email: '', contact: '', course: '', department: '', year: '', domain: '', referral: '',
-  });
+  const [formData, setFormData] = useState<Draft>(EMPTY_DRAFT);
+  const [tracks, setTracks] = useState<TrackOption[]>(initialTracks);
   const router = useRouter();
   const [progress, setProgress] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [cashfree, setCashfree] = useState<CashfreeSDK | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [paymentSessionId, setPaymentSessionId] = useState<string | null>(null);
-  const [domainStatus, setDomainStatus] = useState<Record<string, boolean>>({});
   const [formErrors, setFormErrors] = useState({ email: '', contact: '' });
   const [submitError, setSubmitError] = useState('');
 
-  // Must stay in sync with the allowedDomains check in api/create-order.
-  const domains = ['C', 'Python', 'Web', 'DSA', 'AIML'];
+  const isOtherCollege = formData.college === OTHER_COLLEGE;
 
+  // ── draft restore / persist ────────────────────────────────────────────────
+  // Restored against the server-rendered track list, which is why this runs once
+  // on mount rather than waiting for the availability refresh below.
   useEffect(() => {
-    const saved = sessionStorage.getItem('pfe-form-data');
+    const saved = sessionStorage.getItem(DRAFT_KEY);
     if (!saved) return;
-    try {
-      setFormData(JSON.parse(saved));
-    } catch (error) {
-      console.error('Failed to parse saved form data:', error);
-    }
+    const draft = restoreDraft(saved, initialTracks);
+    if (draft) setFormData(draft);
+    // initialTracks is a server prop and stable for the life of the page.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    sessionStorage.setItem('pfe-form-data', JSON.stringify(formData));
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
   }, [formData]);
 
   useEffect(() => {
@@ -170,32 +188,124 @@ export default function RegistrationForm({
     initializeSDK();
   }, [cashfreeMode]);
 
-  useEffect(() => {
-    const filled = REQUIRED_FIELDS.filter((k) => formData[k] !== '').length;
-    setProgress((filled / REQUIRED_FIELDS.length) * 100);
-  }, [formData]);
+  // ── progress ring ──────────────────────────────────────────────────────────
+  // The denominator moves with the SKU: a capstone buyer has no track to pick,
+  // so a full capstone form must still read 100%.
+  const required = useMemo(() => requiredFor(formData.sku), [formData.sku]);
 
   useEffect(() => {
-    const fetchDomainStatus = async () => {
-      try {
-        const response = await fetch('/api/domain-count');
-        const data = await response.json();
-        if (data.success && data.registrationAllowed) {
-          setDomainStatus(data.registrationAllowed as Record<string, boolean>);
-        }
-      } catch (error) {
-        console.error('Failed to fetch domain status:', error);
-      }
-    };
-    fetchDomainStatus();
+    const filled = required.filter((key) => formData[key] !== '').length;
+    setProgress((filled / required.length) * 100);
+  }, [formData, required]);
+
+  // ── live availability ──────────────────────────────────────────────────────
+  const refreshAvailability = useCallback(async () => {
+    try {
+      const response = await fetch('/api/domain-count');
+      const data = await response.json();
+      // On any failure keep the server-rendered list rather than blanking the
+      // selects — a stale-but-present list beats an empty one.
+      if (data.success && Array.isArray(data.tracks)) setTracks(data.tracks as TrackOption[]);
+    } catch (error) {
+      console.error('Failed to fetch track availability:', error);
+    }
   }, []);
 
+  useEffect(() => {
+    refreshAvailability();
+  }, [refreshAvailability]);
+
+  // A track that filled up while this tab was open is dropped from the selection
+  // so it cannot be submitted. Returning `prev` unchanged when nothing is stale
+  // keeps this from looping.
+  useEffect(() => {
+    setFormData((prev) => {
+      const ok = (slug: string) => {
+        if (!slug) return true;
+        const track = tracks.find((t) => t.slug === slug);
+        return Boolean(track && !track.full);
+      };
+      if (ok(prev.singleTrack) && ok(prev.beginnerTrack) && ok(prev.advancedTrack)) return prev;
+      return {
+        ...prev,
+        singleTrack: ok(prev.singleTrack) ? prev.singleTrack : '',
+        beginnerTrack: ok(prev.beginnerTrack) ? prev.beginnerTrack : '',
+        advancedTrack: ok(prev.advancedTrack) ? prev.advancedTrack : '',
+      };
+    });
+  }, [tracks]);
+
+  // ── change handlers ────────────────────────────────────────────────────────
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      // Course and Department swap between <select> and free text with the
+      // college. Carrying the old value across would leave the ring counting a
+      // field the new control cannot display, and post a course that is not on
+      // the list.
+      if (name === 'college' && value !== prev.college) {
+        return { ...prev, college: value, course: '', department: '' };
+      }
+      return { ...prev, [name]: value };
+    });
     if (name === 'email' || name === 'contact') {
       setFormErrors((prev) => ({ ...prev, [name]: '' }));
     }
+  };
+
+  const handleSkuChange = (sku: Sku) => {
+    setSubmitError('');
+    setFormData((prev) => ({ ...prev, sku }));
+  };
+
+  const handleTrackChange = (name: TrackFieldName, value: string) => {
+    setSubmitError('');
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // ── submit ─────────────────────────────────────────────────────────────────
+  /**
+   * The request body, built from the SKU rather than from the whole draft.
+   * Returns a message instead of a body when the selection is incomplete, so the
+   * user gets told here rather than by a 400.
+   */
+  const buildPayload = (): Record<string, string> | string => {
+    if (!formData.sku) return 'Choose what you want to register for.';
+
+    const payload: Record<string, string> = {
+      name: formData.name.trim(),
+      email: formData.email.trim(),
+      contact: formData.contact.trim(),
+      college: formData.college.trim(),
+      course: formData.course.trim(),
+      department: formData.department.trim(),
+      year: formData.year.trim(),
+      sku: formData.sku,
+    };
+    if (formData.referral.trim()) payload.referral = formData.referral.trim();
+
+    if (formData.sku === 'single') {
+      const track = tracks.find((t) => t.slug === formData.singleTrack);
+      if (!track) return 'Choose a track.';
+      if (track.full) return `${track.name} is full. Please choose another track.`;
+      // The server takes the slug in the key matching its segment; sending both
+      // is rejected as "a single track means one track, not two".
+      if (track.segment === 'beginner') payload.beginnerTrack = track.slug;
+      else payload.advancedTrack = track.slug;
+    }
+
+    if (formData.sku === 'bundle') {
+      const beginner = tracks.find((t) => t.slug === formData.beginnerTrack);
+      const advanced = tracks.find((t) => t.slug === formData.advancedTrack);
+      if (!beginner || !advanced) return 'A bundle needs one beginner and one advanced track.';
+      if (beginner.full || advanced.full) {
+        return `${(beginner.full ? beginner : advanced).name} is full. Please choose another track.`;
+      }
+      payload.beginnerTrack = beginner.slug;
+      payload.advancedTrack = advanced.slug;
+    }
+
+    return payload;
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -203,14 +313,20 @@ export default function RegistrationForm({
     setSubmitError('');
 
     const errors = { email: '', contact: '' };
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    if (!EMAIL_RE.test(formData.email)) {
       errors.email = 'Please enter a valid email address.';
     }
-    if (!/^[6-9]\d{9}$/.test(formData.contact)) {
+    if (!CONTACT_RE.test(formData.contact)) {
       errors.contact = 'Please enter a valid 10-digit mobile number.';
     }
     setFormErrors(errors);
     if (errors.email || errors.contact) return;
+
+    const payload = buildPayload();
+    if (typeof payload === 'string') {
+      setSubmitError(payload);
+      return;
+    }
 
     if (!cashfree) {
       setSubmitError('Payment system is still loading. Please try again in a moment.');
@@ -222,21 +338,29 @@ export default function RegistrationForm({
       const response = await fetch('/api/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
       const data = await response.json();
 
       if (data.success && data.payment_session_id) {
         setPaymentSessionId(data.payment_session_id);
         setOrderId(data.order_id);
-        sessionStorage.removeItem('pfe-form-data');
+        sessionStorage.removeItem(DRAFT_KEY);
+      } else if (data.success && data.free) {
+        // A zero-value order never reaches Cashfree — the server completed it
+        // already. Without this branch a successful registration would show
+        // "Failed to create order".
+        sessionStorage.removeItem(DRAFT_KEY);
+        router.push(`/payment-status?order_id=${data.order_id}`);
+        return;
       } else if (data.error === 'REGISTRATION_CLOSED') {
         // The admin closed registration while this tab was open.
         setSubmitError('Registration has just closed. Please refresh the page.');
-      } else if (data.error === 'DOMAIN_FULL') {
-        setSubmitError(`${data.message} Please pick a different domain.`);
-        setFormData((prev) => ({ ...prev, domain: '' }));
-        setDomainStatus((prev) => ({ ...prev, [formData.domain]: false }));
+      } else if (data.error === 'TRACK_FULL') {
+        // The message names the track by display name only; do not try to work
+        // out which slug it was. Re-reading availability disables it properly.
+        setSubmitError(data.message || 'That track just filled up. Please choose another.');
+        refreshAvailability();
       } else {
         setSubmitError(data.message || 'Failed to create order. Please try again.');
       }
@@ -293,17 +417,49 @@ export default function RegistrationForm({
 
             {!paymentSessionId ? (
               <form onSubmit={handleSubmit}>
+                <SkuChooser value={formData.sku} priceLabels={priceLabels} onChange={handleSkuChange} />
+
+                <TrackFields
+                  sku={formData.sku}
+                  tracks={tracks}
+                  singleTrack={formData.singleTrack}
+                  beginnerTrack={formData.beginnerTrack}
+                  advancedTrack={formData.advancedTrack}
+                  onChange={handleTrackChange}
+                />
+
                 <InputField label="Your Name" type="text" placeholder="Enter your full name" name="name" value={formData.name} onChange={handleInputChange} required />
                 <InputField label="Your Email" type="email" placeholder="youremail@domain.com" name="email" value={formData.email} onChange={handleInputChange} required error={formErrors.email} />
                 <InputField label="Contact Number" type="tel" placeholder="9876543210" name="contact" value={formData.contact} onChange={handleInputChange} required error={formErrors.contact} />
-                <SelectField label="Course" name="course" options={fieldOptions.courses} value={formData.course} onChange={handleInputChange} required />
-                <SelectField label="Department" name="department" options={fieldOptions.departments} value={formData.department} onChange={handleInputChange} required />
-                <SelectField label="Current Academic Year" name="year" options={fieldOptions.years} value={formData.year} onChange={handleInputChange} required />
-                <SelectField label="Choose one domain to participate in" name="domain" options={domains} value={formData.domain} onChange={handleInputChange} required domainStatus={domainStatus} />
+
+                <SelectField label="College" name="college" options={toOptions(fieldOptions.colleges)} value={formData.college} onChange={handleInputChange} required />
+
+                {/* Outside NMIMS the course and department lists do not apply, so
+                    they become free text rather than forcing a wrong pick. */}
+                {isOtherCollege ? (
+                  <>
+                    <InputField label="Course" type="text" placeholder="e.g. B.E. Computer Science" name="course" value={formData.course} onChange={handleInputChange} required />
+                    <InputField label="Department" type="text" placeholder="e.g. Information Technology" name="department" value={formData.department} onChange={handleInputChange} required />
+                  </>
+                ) : (
+                  <>
+                    <SelectField label="Course" name="course" options={toOptions(fieldOptions.courses)} value={formData.course} onChange={handleInputChange} required />
+                    <SelectField label="Department" name="department" options={toOptions(fieldOptions.departments)} value={formData.department} onChange={handleInputChange} required />
+                  </>
+                )}
+
+                <SelectField label="Current Academic Year" name="year" options={toOptions(fieldOptions.years)} value={formData.year} onChange={handleInputChange} required />
                 <InputField label="Referral" type="text" name="referral" placeholder="Optional" value={formData.referral} onChange={handleInputChange} />
 
                 <div className="mt-12 text-center">
-                  <p className="text-2xl font-bold text-white">Ticket Price: {priceLabel}</p>
+                  {/* Display only. Whatever this says is cosmetic — api/create-order
+                      recomputes the amount from `settings` and never reads one
+                      off the request. */}
+                  <p className="text-2xl font-bold text-white" aria-live="polite">
+                    {formData.sku
+                      ? <>Ticket Price: {priceLabels[formData.sku]}</>
+                      : <span className="text-lg font-semibold text-gray-400">Choose an option above to see the price</span>}
+                  </p>
                   {/* Held to a short measure so it stays 2-3 balanced lines
                       instead of one 95-character line on desktop and a ragged
                       block on mobile. */}

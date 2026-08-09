@@ -4,18 +4,22 @@ import Link from "next/link";
 import Image from "next/image";
 import { toJpeg } from "html-to-image";
 
+/**
+ * Exactly what /api/get-status returns — an unauthenticated endpoint, so this is
+ * a deliberately small whitelist and not the registration row.
+ *
+ * 2026 replaced the single `domain` with a SKU plus up to three tracks, so the
+ * ticket now shows a resolved `description` ("Python + Capstone Day"). A 2025
+ * ticket resolves from the read-only archive and says so.
+ */
 interface RegistrationDetails {
-    id: number;
+    edition: 2025 | 2026;
     name: string;
-    email: string;
-    contact: string;
-    course: string;
-    department: string;
-    year: string;
-    domain: string;
+    description: string;
+    sku: string | null;
+    course: string | null;
+    year: string | null;
     orderId: string;
-    paymentStatus: string | null;
-    createdAt: Date | null;
     qrCodeUrl: string | null;
 }
 
@@ -164,9 +168,14 @@ const StatusDisplay = () => {
                                     </div>
                                     <div className="text-center pt-6 flex-grow w-full">
                                         <h2 className="text-2xl font-bold text-white leading-tight">{details.name}</h2>
-                                        <p className="text-lg text-pink-400 mt-1">Domain: {details.domain}</p>
+                                        <p className="text-lg text-pink-400 mt-1">{details.description}</p>
+                                        {details.edition === 2025 && (
+                                            <p className="text-xs text-amber-300 mt-2 tracking-wide uppercase">
+                                                PFE 2025 &middot; archived registration
+                                            </p>
+                                        )}
                                         <p className="text-sm text-gray-400 mt-3">
-                                            {details.course} &bull; {details.year}
+                                            {[details.course, details.year].filter(Boolean).join(" • ")}
                                         </p>
                                         <p className="text-xs text-gray-500 tracking-wider font-mono mt-4 uppercase">ORDER ID</p>
                                         <p className="text-xs text-gray-300 tracking-wider font-mono">{details.orderId}</p>

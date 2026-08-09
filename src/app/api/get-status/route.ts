@@ -1,9 +1,7 @@
 // app/api/get-status/route.ts
 import { NextResponse } from 'next/server';
 import { Cashfree, CFEnvironment } from "cashfree-pg";
-import { db } from '@/lib/db';
-import { registrations } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { lookupTicket, type TicketView } from '@/lib/registration/lookupTicket';
 
 // Initialize Cashfree with the same credentials and environment as your create-order route
 const cashfreeEnvironment = process.env.CASHFREE_ENV === 'PRODUCTION'
@@ -16,6 +14,32 @@ const cashfree = new Cashfree(
   process.env.CASHFREE_SECRET_KEY!
 );
 
+/**
+ * What the ticket screen is allowed to see.
+ *
+ * This endpoint is UNAUTHENTICATED — anyone holding an order id can call it — so
+ * the payload is whitelisted here rather than spread from the row. Contact
+ * details deliberately never leave the server through this route.
+ */
+function publicDetails(view: TicketView) {
+  return {
+    edition: view.edition,
+    name: view.name,
+    description: view.description,
+    sku: view.sku,
+    course: view.course,
+    year: view.year,
+    orderId: view.orderId,
+    qrCodeUrl: view.qrCodeUrl,
+  };
+}
+
+/** 2025 rows recorded the gateway's own wording; treat either spelling as paid. */
+function archivePaid(status: string | null): boolean {
+  const s = (status ?? '').toLowerCase();
+  return s === 'success' || s === 'paid' || s === 'comped';
+}
+
 export async function POST(request: Request) {
   try {
     const { order_id } = await request.json();
@@ -24,8 +48,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: 'Order ID is required' }, { status: 400 });
     }
 
-    const payments = await cashfree.PGOrderFetchPayments(order_id);
-    const paymentData = payments.data;
+    let payments;
+    try {
+      const res = await cashfree.PGOrderFetchPayments(order_id);
+      payments = res.data;
+    } catch (gatewayError) {
+      // A 2025 order id may no longer exist at the gateway at all. Those tickets
+      // are settled history: if the archive says it was paid, show it rather than
+      // 500-ing at someone holding a valid old QR code. Live 2026 orders keep the
+      // old behaviour — the gateway, not the database, decides whether they paid.
+      const archived = await lookupTicket(order_id);
+      if (archived?.view.edition === 2025 && archivePaid(archived.view.paymentStatus)) {
+        return NextResponse.json({
+          success: true,
+          status: 'Success',
+          details: publicDetails(archived.view),
+        });
+      }
+      throw gatewayError;
+    }
+
+    const paymentData = payments;
 
     let registrationDetails = null;
 
@@ -35,19 +78,10 @@ export async function POST(request: Request) {
       const successTx = paymentData.find(tx => tx.payment_status === "SUCCESS");
       if (successTx) {
         orderStatus = "Success";
-        const result = await db.select().from(registrations).where(eq(registrations.orderId, order_id));
-        if (result.length > 0) {
-          const dbRecord = result[0];
-          registrationDetails = {
-            name: dbRecord.name,
-            // 2026 replaces the single `domain` with a SKU plus up to three
-            // tracks. The phase 2 archive-fallback stream expands this into the
-            // resolved track names; `sku` keeps the page working meanwhile.
-            sku: dbRecord.sku,
-            orderId: dbRecord.orderId,
-            qrCodeUrl: dbRecord.qrCodeUrl
-          }
-        }
+        // Falls back to the read-only 2025 archive: those rows were moved out of
+        // the live table by migration 0007, so a 2025 ticket misses here first.
+        const found = await lookupTicket(order_id);
+        if (found) registrationDetails = publicDetails(found.view);
       } else {
         const pendingTx = paymentData.find(tx => tx.payment_status === "PENDING");
         if (pendingTx) {

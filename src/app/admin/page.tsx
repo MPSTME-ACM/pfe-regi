@@ -3,15 +3,21 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import AdminGate, { clearStoredCreds } from '@/components/admin/AdminGate';
+import { TracksTab, useTracksEditor } from '@/components/admin/TracksTab';
 import type { EventConfig, FieldOptions, Settings } from '@/lib/db/schema';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Admin panel.
 //
-// Phase 1 covers the Registration tab (the open/close switch that replaced the
-// rename-five-files-and-commit ritual) plus prices, event copy and form options.
-// Tracks / Coupons / Referrers arrive in phases 2 and 3 — their tabs are stubbed
-// so the shape of the panel is visible now.
+// The Registration tab holds the open/close switch that replaced the
+// rename-five-files-and-commit ritual; the rest are prices, event copy, form
+// options and the track roster. Coupons / referrers arrive in phase 3 — that tab
+// is stubbed so the shape of the panel is visible now.
+//
+// Two independent editors share one sticky save bar: the settings draft (four
+// tabs, one PATCH to /api/admin/settings) and the tracks draft (one PATCH to
+// /api/admin/tracks). The bar acts on whichever the current tab owns, and warns
+// when the other has unsaved work rather than silently dropping it.
 // ─────────────────────────────────────────────────────────────────────────────
 
 type TabId = 'registration' | 'pricing' | 'event' | 'fields' | 'tracks' | 'coupons';
@@ -21,7 +27,7 @@ const TABS: { id: TabId; label: string; phase?: string }[] = [
   { id: 'pricing', label: 'Pricing' },
   { id: 'event', label: 'Event details' },
   { id: 'fields', label: 'Form fields' },
-  { id: 'tracks', label: 'Tracks', phase: 'Phase 2' },
+  { id: 'tracks', label: 'Tracks' },
   { id: 'coupons', label: 'Coupons', phase: 'Phase 3' },
 ];
 
@@ -83,6 +89,8 @@ function Panel({ creds, logout }: { creds: string; logout: () => void }) {
     kind: 'idle',
   });
 
+  const tracksEditor = useTracksEditor(creds, tab === 'tracks');
+
   const load = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/settings', { headers: { Authorization: creds } });
@@ -104,9 +112,9 @@ function Panel({ creds, logout }: { creds: string; logout: () => void }) {
     load();
   }, [load]);
 
-  const dirty = !!settings && !!draft && JSON.stringify(settings) !== JSON.stringify(draft);
+  const settingsDirty = !!settings && !!draft && JSON.stringify(settings) !== JSON.stringify(draft);
 
-  const save = async () => {
+  const saveSettings = async () => {
     if (!draft) return;
     setStatus({ kind: 'saving' });
     try {
@@ -133,6 +141,61 @@ function Panel({ creds, logout }: { creds: string; logout: () => void }) {
       setStatus({ kind: 'error', message: e instanceof Error ? e.message : String(e) });
     }
   };
+
+  const [toggling, setToggling] = useState(false);
+
+  /**
+   * Open/close applies IMMEDIATELY, on its own PATCH.
+   *
+   * It used to write into the settings draft and wait for the sticky save bar.
+   * That bar became tab-scoped when the Tracks tab landed, so pressing Save while
+   * on Tracks saved the track roster, reported a green "Saved", and never
+   * transmitted registrationOpen at all — leaving the banner reading OPEN while
+   * the button beneath it read "Open registration", and the public form still
+   * taking paid orders. Neither change was wrong on its own; the toggle sits
+   * above the tabs and belongs to no tab, which is exactly why it must not
+   * depend on one.
+   *
+   * Other pending settings edits are preserved: only this one field is patched.
+   */
+  const toggleRegistration = async () => {
+    if (!draft || toggling) return;
+    const next = !draft.registrationOpen;
+    setToggling(true);
+    setStatus({ kind: 'saving' });
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method: 'PATCH',
+        headers: { Authorization: creds, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ registrationOpen: next }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'Failed to change registration');
+      setSettings(data.settings);
+      setDraft((d) => (d ? { ...d, registrationOpen: data.settings.registrationOpen } : d));
+      setStatus({ kind: 'ok', message: next ? 'Registration opened' : 'Registration closed' });
+    } catch (e) {
+      setStatus({ kind: 'error', message: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setToggling(false);
+    }
+  };
+
+  // The save bar belongs to whichever editor the current tab owns.
+  const onTracks = tab === 'tracks';
+  const barDirty = onTracks ? tracksEditor.dirty : settingsDirty;
+  const barStatus = onTracks ? tracksEditor.status : status;
+  const barSave = onTracks ? tracksEditor.save : saveSettings;
+  const barDiscard = onTracks
+    ? tracksEditor.discard
+    : () => {
+        setDraft(settings);
+        setStatus({ kind: 'idle' });
+      };
+  // Edits on the tab you are not looking at are still pending. Say so — the
+  // alternative is an admin who saves prices and assumes their capacity change
+  // went with it.
+  const elsewhereDirty = onTracks ? settingsDirty : tracksEditor.dirty;
 
   const patch = (p: Partial<Settings>) => setDraft((d) => (d ? { ...d, ...p } : d));
   const patchEvent = (p: Partial<EventConfig>) =>
@@ -203,14 +266,19 @@ function Panel({ creds, logout }: { creds: string; logout: () => void }) {
             </p>
           </div>
           <button
-            onClick={() => patch({ registrationOpen: !draft.registrationOpen })}
-            className={`shrink-0 font-bold px-4 py-2 rounded-lg transition ${
+            onClick={toggleRegistration}
+            disabled={toggling}
+            className={`shrink-0 font-bold px-4 py-2 rounded-lg transition disabled:opacity-50 ${
               draft.registrationOpen
                 ? 'bg-red-500/80 hover:bg-red-500 text-white'
                 : 'bg-green-500/80 hover:bg-green-500 text-black'
             }`}
           >
-            {draft.registrationOpen ? 'Close registration' : 'Open registration'}
+            {toggling
+              ? 'Saving…'
+              : draft.registrationOpen
+                ? 'Close registration'
+                : 'Open registration'}
           </button>
         </div>
 
@@ -352,38 +420,38 @@ function Panel({ creds, logout }: { creds: string; logout: () => void }) {
           </section>
         )}
 
-        {(tab === 'tracks' || tab === 'coupons') && (
+        {tab === 'tracks' && <TracksTab editor={tracksEditor} />}
+
+        {tab === 'coupons' && (
           <section className="text-gray-400 text-sm border border-dashed border-white/15 rounded-xl p-8 text-center">
             <p className="font-medium text-gray-300 mb-1">Not built yet</p>
-            <p>
-              {tab === 'tracks'
-                ? 'Track list, per-track capacity and dates arrive with the phase 2 schema change.'
-                : 'Coupon generation, redemption log and the referrer leaderboard arrive in phase 3.'}
-            </p>
+            <p>Coupon generation, redemption log and the referrer leaderboard arrive in phase 3.</p>
           </section>
         )}
 
-        <div className="sticky bottom-0 mt-10 -mx-6 sm:-mx-8 px-6 sm:px-8 py-4 bg-gray-900/95 backdrop-blur border-t border-white/10 flex items-center gap-4">
+        <div className="sticky bottom-0 mt-10 -mx-6 sm:-mx-8 px-6 sm:px-8 py-4 bg-gray-900/95 backdrop-blur border-t border-white/10 flex flex-wrap items-center gap-4">
           <button
-            onClick={save}
-            disabled={!dirty || status.kind === 'saving'}
+            onClick={barSave}
+            disabled={!barDirty || barStatus.kind === 'saving'}
             className="bg-[#e97bfc] text-black font-bold px-5 py-2.5 rounded-lg transition hover:shadow-lg hover:shadow-[#e97bfc]/40 disabled:opacity-40 disabled:hover:shadow-none"
           >
-            {status.kind === 'saving' ? 'Saving…' : 'Save changes'}
+            {barStatus.kind === 'saving' ? 'Saving…' : onTracks ? 'Save tracks' : 'Save changes'}
           </button>
-          {dirty && (
-            <button
-              onClick={() => {
-                setDraft(settings);
-                setStatus({ kind: 'idle' });
-              }}
-              className="text-sm text-gray-400 hover:text-white"
-            >
+          {barDirty && (
+            <button onClick={barDiscard} className="text-sm text-gray-400 hover:text-white">
               Discard
             </button>
           )}
-          {!dirty && status.kind === 'ok' && <span className="text-sm text-green-400">Saved</span>}
-          {status.kind === 'error' && <span className="text-sm text-red-400">{status.message}</span>}
+          {!barDirty && barStatus.kind === 'ok' && <span className="text-sm text-green-400">Saved</span>}
+          {barStatus.kind === 'error' && (
+            <span className="text-sm text-red-400">{barStatus.message}</span>
+          )}
+          {elsewhereDirty && (
+            <span className="text-xs text-yellow-400/90">
+              Unsaved changes on the {onTracks ? 'settings tabs' : 'Tracks tab'} — this button does
+              not save them.
+            </span>
+          )}
         </div>
       </div>
     </main>

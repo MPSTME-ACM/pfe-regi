@@ -1,7 +1,24 @@
-<mjml>
+<!--
+  Source of truth for the confirmation email.
+
+  Every ${...} in this file is interpolated by the template literal in
+  src/lib/mail/mailUtil.ts, so the placeholder names here MUST match the locals
+  declared there. Nothing about the event is written down twice: dateRange,
+  timeRange, venue, contactEmail and whatsappUrl all come from
+  settings.eventConfig, and skuLabel / scheduleHtml describe the row the buyer
+  actually has.
+
+  Regenerate after editing:
+    npx mjml src/lib/mail/mail.mjml -o <somewhere>/mail.html
+  then paste the result into the `html` template literal in mailUtil.ts. mjml is
+  deliberately NOT a project dependency.
+
+  The QR is an attachment, not an inline data URI — keep src="cid:qr-code".
+-->
+<mjml lang="en" dir="ltr">
   <mj-head>
     <mj-title>PFE Workshop Registration Confirmed</mj-title>
-    <mj-preview>Your registration for Programming For Everyone workshop is confirmed!</mj-preview>
+    <mj-preview>Your registration for Programming For Everyone is confirmed!</mj-preview>
     <mj-attributes>
       <mj-all font-family="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" />
       <mj-text font-size="16px" color="#333333" line-height="1.6" />
@@ -49,8 +66,11 @@
         <mj-text align="center" color="#ffffff" font-size="32px" font-weight="bold" padding-bottom="10px">
           PFE - Programming For Everyone
         </mj-text>
-        <mj-text align="center" color="#f8c8fc" font-size="18px">
+        <mj-text align="center" color="#f8c8fc" font-size="18px" padding-bottom="6px">
           by ACM MPSTME
+        </mj-text>
+        <mj-text align="center" color="#cccccc" font-size="14px">
+          ${dateRange}
         </mj-text>
       </mj-column>
     </mj-section>
@@ -63,7 +83,7 @@
         </mj-text>
         <mj-text font-size="18px" color="#333333" align="center" padding-bottom="30px">
           Hi ${name},<br />
-          Welcome to the <span class="purple-text">${domain}</span> track!
+          Your <span class="purple-text">${skuLabel}</span> registration is confirmed.
         </mj-text>
       </mj-column>
     </mj-section>
@@ -72,32 +92,32 @@
     <mj-section background-color="#f8f9fa" padding="30px 20px">
       <mj-column>
         <mj-text font-size="20px" font-weight="bold" color="#1a0d1f" align="center" padding-bottom="20px">
-          Workshop Details
+          Your Registration
         </mj-text>
         <mj-table css-class="details-table" width="100%">
           <tr>
             <td class="details-label">Event:</td>
-            <td class="details-value">Programming For Everyone Workshop</td>
+            <td class="details-value">Programming For Everyone</td>
           </tr>
           <tr>
-            <td class="details-label">Domain:</td>
-            <td class="purple-text">${domain}</td>
+            <td class="details-label">You bought:</td>
+            <td class="purple-text">${skuLabel}</td>
+          </tr>
+          <tr>
+            <td class="details-label">Your days:</td>
+            <td class="details-value">${scheduleHtml}</td>
           </tr>
           <tr>
             <td class="details-label">Order ID:</td>
             <td class="purple-text">${orderId}</td>
           </tr>
           <tr>
-            <td class="details-label">Dates:</td>
-            <td class="details-value">16 - 18 September</td>
-          </tr>
-          <tr>
             <td class="details-label">Time:</td>
-            <td class="details-value">5:00 PM - 7:00 PM (All 3 days)</td>
+            <td class="details-value">${timeRange}</td>
           </tr>
           <tr>
             <td class="details-label">Venue:</td>
-            <td class="details-value">MPSTME Campus, Mumbai. <br />(Classroom details will be shared soon)</td>
+            <td class="details-value">${venue} <br />(Classroom details will be shared soon)</td>
           </tr>
         </mj-table>
       </mj-column>
@@ -148,9 +168,9 @@
           Need Help?
         </mj-text>
         <mj-text font-size="14px" color="#333333" align="center" padding-bottom="20px">
-          Contact us at <a href="mailto:pfe@mpst.me" style="color: #e97bfc; text-decoration: none;">pfe@mpst.me</a> or,
+          Contact us at <a href="mailto:${contactEmail}" style="color: #e97bfc; text-decoration: none;">${contactEmail}</a> or,
         </mj-text>
-        <mj-button href="https://wa.me/919076195651" font-size="14px" padding="10px 20px">
+        <mj-button href="${whatsappUrl}" font-size="14px" padding="10px 20px">
           WhatsApp Support
         </mj-button>
       </mj-column>
@@ -166,7 +186,7 @@
           Mukesh Patel School of Technology Management &amp; Engineering
         </mj-text>
         <mj-text align="center" color="#999999" font-size="10px">
-          This email was sent because you registered and paid for the PFE Workshop 2025.
+          This email was sent because you registered for Programming For Everyone.
         </mj-text>
       </mj-column>
     </mj-section>

@@ -1,8 +1,10 @@
 import { db } from '@/lib/db';
 import { registrations, tracks } from '@/lib/db/schema';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, or, type SQL } from 'drizzle-orm';
 import qrcode from 'qrcode';
-import { sendMail } from '@/lib/mail/mailUtil';
+import { sendMail, type TicketItem } from '@/lib/mail/mailUtil';
+import { CAPSTONE_SLUG } from '@/lib/registration/capacity';
+import { getSettings } from '@/lib/settings';
 
 /**
  * Finish a registration that never touches the payment gateway.
@@ -39,22 +41,57 @@ export async function completeWithoutPayment(orderId: string): Promise<void> {
  * time this runs; letting an SMTP blip bubble up would turn a completed payment
  * into a 500. `emailSentAt` stays null instead, which is the signal the admin
  * panel uses to find people who paid and got no ticket.
+ *
+ * The signature is intentionally unchanged — `api/webhook` calls this, and that
+ * file is owned by the human thread. Everything the new structured email needs
+ * (the tracks, their dates, settings.eventConfig) is assembled in here.
  */
 export async function sendTicketEmail(orderId: string, qrCodeUrl: string): Promise<void> {
   try {
     const [row] = await db.select().from(registrations).where(eq(registrations.orderId, orderId)).limit(1);
     if (!row) return;
 
+    // One query for both the bought tracks and the capstone day. The capstone is
+    // a boolean on the row rather than an FK, so its dates have to be looked up
+    // by slug — but not in a second round trip.
     const ids = [row.beginnerTrackId, row.advancedTrackId].filter((n): n is number => n !== null);
-    const picked = ids.length ? await db.select().from(tracks).where(inArray(tracks.id, ids)) : [];
+    const filters: SQL[] = [];
+    if (ids.length) filters.push(inArray(tracks.id, ids));
+    if (row.hasCapstone) filters.push(eq(tracks.slug, CAPSTONE_SLUG));
+    const picked = filters.length
+      ? await db.select().from(tracks).where(or(...filters))
+      : [];
+    const byId = new Map(picked.map((t) => [t.id, t]));
 
-    const names = picked.map((t) => t.name);
-    if (row.hasCapstone) names.push('Capstone Day');
-    // The email template still takes a single "domain" string; phase 2's email
-    // stream replaces this with a structured payload.
-    const description = names.join(' + ') || row.sku;
+    // Programme order: beginner days, then advanced days, then the capstone.
+    const items: TicketItem[] = [];
+    const beginner = row.beginnerTrackId === null ? undefined : byId.get(row.beginnerTrackId);
+    if (beginner) items.push({ name: beginner.name, segment: 'beginner', dates: beginner.dates });
+    const advanced = row.advancedTrackId === null ? undefined : byId.get(row.advancedTrackId);
+    if (advanced) items.push({ name: advanced.name, segment: 'advanced', dates: advanced.dates });
+    if (row.hasCapstone) {
+      // Fall back rather than throw: a missing capstone row must not cost a paid
+      // registrant their ticket email.
+      const capstone = picked.find((t) => t.slug === CAPSTONE_SLUG);
+      items.push({
+        name: capstone?.name ?? 'Capstone Day',
+        segment: 'capstone',
+        dates: capstone?.dates ?? [],
+      });
+    }
 
-    await sendMail(row.email, description, row.name, qrCodeUrl, orderId);
+    // Dates, venue and contacts come from the admin panel, not from the template.
+    const settings = await getSettings();
+
+    await sendMail({
+      to: row.email,
+      name: row.name,
+      orderId,
+      sku: row.sku,
+      items,
+      qrUrl: qrCodeUrl,
+      event: settings.eventConfig,
+    });
     await db
       .update(registrations)
       .set({ emailSentAt: new Date() })
