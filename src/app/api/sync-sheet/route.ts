@@ -3,6 +3,9 @@ import { google } from 'googleapis';
 import { db } from '@/lib/db';
 import { registrations } from '@/lib/db/schema';
 import { asc } from 'drizzle-orm';
+import { requireAdmin } from '@/lib/auth/requireAdmin';
+
+type SheetRow = string[];
 
 const sheets = google.sheets('v4');
 
@@ -29,21 +32,8 @@ const formatDbRecordAsRow = (reg: typeof registrations.$inferSelect) => [
 
 export async function POST(request: Request) {
   // --- 1. Authentication & Authorization ---
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader) {
-    return NextResponse.json({ success: false, message: 'Authorization header missing' }, { status: 401 });
-  }
-
-  try {
-    const encoded = authHeader.split(' ')[1];
-    const decoded = Buffer.from(encoded, 'base64').toString('utf-8');
-    const [username, password] = decoded.split(':');
-    if (username !== 'admin' || password !== process.env.ADMIN_PASSWORD) {
-      return NextResponse.json({ success: false, message: 'Invalid credentials' }, { status: 401 });
-    }
-  } catch {
-    return NextResponse.json({ success: false, message: 'Malformed authorization header' }, { status: 400 });
-  }
+  const auth = requireAdmin(request);
+  if (!auth.ok) return auth.response;
 
   // --- 2. Sync Logic ---
   try {
@@ -60,7 +50,7 @@ export async function POST(request: Request) {
       db.select().from(registrations).orderBy(asc(registrations.createdAt)),
     ]);
 
-    const sheetValues = sheetResponse.data.values || [];
+    const sheetValues = (sheetResponse.data.values || []) as SheetRow[];
 
     // --- Step B: Handle initial sync for an empty sheet ---
     const headers = [
@@ -91,7 +81,7 @@ export async function POST(request: Request) {
       throw new Error("A column named 'Order ID' is required in the sheet and was not found.");
     }
 
-    const sheetMap = new Map<string, { rowData: any[]; rowIndex: number }>();
+    const sheetMap = new Map<string, { rowData: SheetRow; rowIndex: number }>();
     sheetValues.slice(1).forEach((row, index) => {
       const orderId = row[orderIdIndex];
       if (orderId) {
@@ -101,8 +91,8 @@ export async function POST(request: Request) {
     });
 
     // --- Step D: Compare DB records to sheet map to find what to append or update ---
-    const recordsToUpdate: { range: string; values: any[][] }[] = [];
-    const recordsToAppend: any[][] = [];
+    const recordsToUpdate: { range: string; values: SheetRow[] }[] = [];
+    const recordsToAppend: SheetRow[] = [];
 
     for (const dbRecord of dbRegistrations) {
       const dbRowArray = formatDbRecordAsRow(dbRecord);

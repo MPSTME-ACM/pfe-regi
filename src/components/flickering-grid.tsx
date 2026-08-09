@@ -127,7 +127,6 @@ const FlickeringGrid: React.FC<FlickeringGridProps> = ({
 
       // Batch similar opacity squares together for better performance
       const squareSize_dpr = squareSize * dpr
-      const gridGap_dpr = gridGap * dpr
       const step = squareSize + gridGap
 
       for (let i = 0; i < cols; i++) {

@@ -2,6 +2,15 @@
   "name": "pfe-regi",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.34.5",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@tailwindcss/oxide",
+      "esbuild",
+      "sharp",
+      "unrs-resolver"
+    ]
+  },
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
@@ -33,7 +42,6 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
-    "@types/chart.js": "^4.0.1",
     "@types/node": "^20",
     "@types/nodemailer": "^7.0.1",
     "@types/pg": "^8.15.5",

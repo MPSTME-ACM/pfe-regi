@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/auth/requireAdmin';
 
 export async function GET(request: Request) {
-  const auth = request.headers.get('authorization') || '';
-  const expected = `Basic ${Buffer.from(`admin:${process.env.ADMIN_PASSWORD}`).toString('base64')}`;
+  const auth = requireAdmin(request);
+  if (!auth.ok) return auth.response;
 
-  if (auth === expected) {
-    return NextResponse.json({ message: 'Authorized' }, { status: 200 });
-  } else {
-    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-  }
+  return NextResponse.json({ message: 'Authorized' }, { status: 200 });
 }

@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Claude Code agent worktrees. Each is a full checkout with its own node_modules,
+# which otherwise shows up as ~10k untracked files.
+.claude/worktrees/

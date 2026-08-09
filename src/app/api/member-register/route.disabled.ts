@@ -4,15 +4,12 @@ import { registrations } from '@/lib/db/schema';
 import { and, eq, count } from 'drizzle-orm';
 import qrcode from 'qrcode';
 import { sendMail } from '@/lib/mail/mailUtil';
+import { requireMember } from '@/lib/auth/requireAdmin';
 
 export async function POST(request: Request) {
   try {
-    const auth = request.headers.get('authorization') || '';
-    const expected = `Basic ${Buffer.from(`acm:${process.env.MEMBER_PASSWORD}`).toString('base64')}`;
-
-    if (!(auth === expected)) {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = requireMember(request);
+    if (!auth.ok) return auth.response;
     
     const formData = await request.json();
 

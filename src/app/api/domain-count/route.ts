@@ -56,6 +56,7 @@ export async function GET() {
     });
 
   } catch (error) {
+    console.error('[domain-count]', error);
     return NextResponse.json(
       { success: false, message: 'Internal Server Error' },
       { status: 500 }

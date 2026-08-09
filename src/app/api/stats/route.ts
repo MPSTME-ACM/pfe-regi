@@ -1,24 +1,13 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { registrations, paymentStatusEnum } from '@/lib/db/schema';
+import { registrations } from '@/lib/db/schema';
 import { eq, count, and, sql } from 'drizzle-orm';
-
-async function verifyAuth(request: Request) {
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader) return false;
-
-  const encodedCreds = authHeader.split(' ')[1];
-  const decodedCreds = Buffer.from(encodedCreds, 'base64').toString('utf-8');
-  const [username, password] = decodedCreds.split(':');
-
-  return username === 'admin' && password === process.env.ADMIN_PASSWORD;
-}
+import { requireAdmin } from '@/lib/auth/requireAdmin';
 
 export async function GET(request: Request) {
   try {
-    if (!(await verifyAuth(request))) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = requireAdmin(request);
+    if (!auth.ok) return auth.response;
 
     // 2. Domain-wise successful registrations
     const allDomains = ['C', 'Python', 'Web', 'DSA', 'AIML'];

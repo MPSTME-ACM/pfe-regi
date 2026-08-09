@@ -25,62 +25,22 @@ ChartJS.register(
   LineElement
 );
 
-const AdminLogin = ({
-  onLogin,
-  error,
-  setError,
-}: {
-  onLogin: (user: string, pass: string) => void;
-  error: string;
-  setError: (err: string) => void;
-}) => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!username || !password) {
-      setError('Username and Password are required.');
-      return;
-    }
-    setError('');
-    onLogin(username, password);
-  };
-
-  return (
-    <div className="w-full max-w-sm p-8 0 backdrop-blur-md rounded-2xl border border-white/10 shadow-2xl shadow-[#e97bfc]/10">
-      <h2 className="text-2xl font-bold text-center text-white mb-6">Admin Verification</h2>
-      <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder="Username"
-          className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#f8c8fc] transition-all"
-        />
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Password"
-          className="w-full mt-4 bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#f8c8fc] transition-all"
-        />
-        {error && <p className="text-red-500 text-sm mt-2 text-center">{error}</p>}
-        <button
-          type="submit"
-          className="w-full mt-6 bg-[#e97bfc] text-black font-bold py-3 px-6 rounded-lg text-lg transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg hover:shadow-[#e97bfc]/50 active:scale-95"
-        >
-          Authenticate
-        </button>
-      </form>
-    </div>
-  );
-};
+interface StatsResponse {
+  success: boolean;
+  total: number;
+  totalAll: number;
+  pending: number;
+  successPercent: number;
+  pendingPercent: number;
+  domains: Record<string, number>;
+  years: Record<string, number>;
+  daily: Record<string, { success: number; pending: number }>;
+}
 
 const StatsPage = () => {
   const [authCreds, setAuthCreds] = useState<string | null>(null);
   const [error, setError] = useState('');
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<StatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -106,8 +66,9 @@ const StatsPage = () => {
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || 'Failed to fetch stats');
         setStats(data);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        setError(message);
       } finally {
         setLoading(false);
       }
@@ -138,6 +99,7 @@ const StatsPage = () => {
       setAuthCreds(creds);
       setError('');
     } catch (err) {
+      console.error('[stats-login]', err);
       setError('Network error during authentication');
     }
   };

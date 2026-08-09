@@ -1,11 +1,6 @@
 "use client"
 
 import FlickeringGrid from "@/components/flickering-grid"
-import dynamic from "next/dynamic"
-
-const DotPattern = dynamic(() => import("@/components/dot-pattern"), {
-  ssr: false,
-})
 
 const Background = () => {
   return (

@@ -69,7 +69,7 @@ export async function POST(request: Request) {
       const qrCodeDataUrl = await qrcode.toDataURL(`${process.env.NEXT_PUBLIC_SITE_URL}/verify?orderId=${order.order_id}`);
 
       // Update database
-      const updateResult = await db.update(registrations)
+      await db.update(registrations)
         .set({
           paymentStatus: 'success',
           qrCodeUrl: qrCodeDataUrl
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
 
       // console.log(`Database updated for order ${order.order_id}: SUCCESS`);
     } else if (payment.payment_status === "FAILED" || payment.payment_status === "USER_DROPPED") {
-      const updateResult = await db.update(registrations)
+      await db.update(registrations)
         .set({ paymentStatus: 'failure' })
         .where(eq(registrations.orderId, order.order_id));
     }

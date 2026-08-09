@@ -444,8 +444,9 @@ const MemberRegisterPageContent = () => {
         role: "",
         departmentACM: "",
       });
-    } catch (err: any) {
-      alert(err.message || "Something went wrong");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Something went wrong";
+      alert(message);
     } finally {
       setIsLoading(false);
     }

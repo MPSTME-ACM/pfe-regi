@@ -1,5 +1,7 @@
 # Base image
-FROM node:18-alpine
+# node 18 went EOL in April 2025 (no security patches) and was two majors behind
+# the version this is developed against. Next 16 will also require >= 20.
+FROM node:22-alpine
 
 WORKDIR /app
 

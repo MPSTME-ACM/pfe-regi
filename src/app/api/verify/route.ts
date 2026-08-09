@@ -2,24 +2,14 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { registrations } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { requireAdmin } from '@/lib/auth/requireAdmin';
 
 export async function POST(request: Request) {
     try {
         // 1. Basic Authentication
-        const authHeader = request.headers.get('Authorization');
-        if (!authHeader) {
-            return NextResponse.json({ success: false, message: 'Authorization required' }, { status: 401 });
-        }
+        const auth = requireAdmin(request);
+        if (!auth.ok) return auth.response;
 
-        const encodedCreds = authHeader.split(' ')[1];
-        const decodedCreds = Buffer.from(encodedCreds, 'base64').toString('utf-8');
-        const [username, password] = decodedCreds.split(':');
-        
-        // Simple check: username is 'admin', password is from env
-        if (username !== 'admin' || password !== process.env.ADMIN_PASSWORD) {
-            return NextResponse.json({ success: false, message: 'Invalid credentials' }, { status: 401 });
-        }
-        
         // 2. Get data from the request body
         const { orderId, attendance } = await request.json();
 

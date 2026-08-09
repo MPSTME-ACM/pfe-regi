@@ -4,6 +4,7 @@ import { Cashfree, CFEnvironment } from "cashfree-pg";
 import { db } from '@/lib/db';
 import { registrations } from '@/lib/db/schema';
 import { and, eq, count } from 'drizzle-orm';
+import { getSettings } from '@/lib/settings';
 
 const cashfreeEnvironment = process.env.CASHFREE_ENV === 'PRODUCTION'
   ? CFEnvironment.PRODUCTION
@@ -17,8 +18,19 @@ const cashfree = new Cashfree(
 
 export async function POST(request: Request) {
   try {
+    // The registration gate. This MUST live here and not only on the page:
+    // hiding the form still leaves this endpoint accepting POSTs from anyone
+    // with the URL. Previously both were disabled together by renaming files.
+    const settings = await getSettings();
+    if (!settings.registrationOpen) {
+      return NextResponse.json({
+        success: false,
+        message: 'Registration is currently closed.',
+        error: 'REGISTRATION_CLOSED',
+      }, { status: 403 });
+    }
+
     const formData = await request.json();
-    const now = new Date();
 
     const domainCheckQuery = await db
       .select({ count: count(registrations.id) })
@@ -39,14 +51,6 @@ export async function POST(request: Request) {
         error: 'DOMAIN_FULL'
       }, { status: 400 });
     }
-
-    // Convert to IST (UTC +5:30)
-    const offset = 5.5 * 60; // 5 hours 30 minutes
-    const ISTDate = new Date(now.getTime() + offset * 60000);
-
-    // Format current date and hour
-    const currentDate = ISTDate.getDate().toString().padStart(2, '0');
-    const currentHour = ISTDate.getHours().toString().padStart(2, '0');
 
     // Extract first name and last name initials
     const [firstName, lastName] = formData.name.split(' ');
