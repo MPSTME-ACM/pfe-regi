@@ -43,3 +43,4 @@ next-env.d.ts
 # Claude Code agent worktrees. Each is a full checkout with its own node_modules,
 # which otherwise shows up as ~10k untracked files.
 .claude/worktrees/
+pfe-ftw-0ead2d18311c.json

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 
 /**
  * Basic-auth gate shared by every admin screen.
@@ -31,11 +32,13 @@ export function clearStoredCreds() {
 
 function LoginForm({
   title,
+  role,
   onLogin,
   error,
   setError,
 }: {
   title: string;
+  role: AdminRole;
   onLogin: (user: string, pass: string) => void;
   error: string;
   setError: (err: string) => void;
@@ -56,35 +59,111 @@ function LoginForm({
     setBusy(false);
   };
 
+  const [showPassword, setShowPassword] = useState(false);
+  const [capsOn, setCapsOn] = useState(false);
+
+  const field =
+    'w-full bg-white/[0.04] border border-white/15 rounded-lg px-3.5 py-3 text-white ' +
+    'placeholder-gray-600 outline-none transition-[border-color,background-color,box-shadow] duration-200 ' +
+    'hover:border-white/25 focus:border-[#e97bfc]/60 focus:bg-white/[0.07] focus:ring-2 focus:ring-[#e97bfc]/25';
+
   return (
-    <div className="w-full max-w-sm p-8 bg-black/30 backdrop-blur-md rounded-2xl border border-white/10 shadow-2xl shadow-[#e97bfc]/10">
-      <h2 className="text-2xl font-bold text-center text-white mb-6">{title}</h2>
-      <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder="Username"
-          autoComplete="username"
-          className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#f8c8fc] transition-all"
+    <div className="w-full max-w-[22rem]">
+      {/* Wordmark outside the card: it identifies the system, it is not a field. */}
+      <div className="mb-7 text-center">
+        <Image
+          src="/pfelogo.png"
+          alt="Programming for Everyone"
+          width={1235}
+          height={727}
+          className="mx-auto w-40 h-auto"
+          priority
         />
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Password"
-          autoComplete="current-password"
-          className="w-full mt-4 bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#f8c8fc] transition-all"
-        />
-        {error && <p className="text-red-500 text-sm mt-2 text-center">{error}</p>}
-        <button
-          type="submit"
-          disabled={busy}
-          className="w-full mt-6 bg-[#e97bfc] text-black font-bold py-3 px-6 rounded-lg text-lg transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-[#e97bfc]/50 active:scale-95 disabled:opacity-50 disabled:hover:scale-100"
-        >
-          {busy ? 'Checking…' : 'Authenticate'}
-        </button>
-      </form>
+        <p className="mt-3 text-[13px] tracking-wide text-gray-500">
+          {role === 'admin' ? 'Organiser access' : 'ACM member access'}
+        </p>
+      </div>
+
+      <div className="rounded-2xl border border-white/10 bg-black/40 backdrop-blur-md p-6 sm:p-7 shadow-2xl shadow-black/40">
+        <h2 className="text-lg font-semibold text-white">{title}</h2>
+        <p className="mt-1 mb-6 text-sm text-gray-400">
+          {role === 'admin'
+            ? 'Sign in to manage registration, pricing and tracks.'
+            : 'Sign in to register ACM members.'}
+        </p>
+
+        <form onSubmit={handleSubmit} noValidate>
+          <label htmlFor="ag-user" className="block text-xs font-medium uppercase tracking-wider text-gray-400 mb-1.5">
+            Username
+          </label>
+          <input
+            id="ag-user"
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            autoComplete="username"
+            autoFocus
+            aria-invalid={!!error}
+            className={field}
+          />
+
+          <label
+            htmlFor="ag-pass"
+            className="mt-5 block text-xs font-medium uppercase tracking-wider text-gray-400 mb-1.5"
+          >
+            Password
+          </label>
+          <div className="relative">
+            <input
+              id="ag-pass"
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              // Caps Lock is the single most common cause of a "wrong password"
+              // that is not actually wrong. Read from the event rather than
+              // tracking keydown state.
+              onKeyUp={(e) => setCapsOn(e.getModifierState?.('CapsLock') ?? false)}
+              onBlur={() => setCapsOn(false)}
+              autoComplete="current-password"
+              aria-invalid={!!error}
+              className={`${field} pr-16`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-pressed={showPassword}
+              className="absolute inset-y-0 right-0 px-3.5 text-xs font-medium text-gray-400 hover:text-white focus-visible:outline-2 focus-visible:outline-[#f8c8fc] focus-visible:outline-offset-[-4px] rounded-r-lg transition-colors"
+            >
+              {showPassword ? 'Hide' : 'Show'}
+            </button>
+          </div>
+
+          {capsOn && (
+            <p className="mt-2 text-xs text-amber-300/90">Caps Lock is on.</p>
+          )}
+
+          {error && (
+            <p
+              role="alert"
+              className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300"
+            >
+              {error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={busy}
+            className="mt-6 w-full rounded-lg bg-[#e97bfc] py-3 font-semibold text-black transition-[transform,box-shadow,opacity] duration-200 ease-out hover:shadow-lg hover:shadow-[#e97bfc]/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white active:scale-[0.99] disabled:opacity-50 disabled:active:scale-100"
+          >
+            {busy ? 'Checking…' : 'Sign in'}
+          </button>
+        </form>
+      </div>
+
+      <p className="mt-5 text-center text-xs text-gray-600">
+        Committee use only. Every change here is live immediately.
+      </p>
     </div>
   );
 }
@@ -134,13 +213,23 @@ export default function AdminGate({
   // Avoid flashing the login form for an already-authenticated admin while
   // sessionStorage is being read on mount.
   if (!ready) {
-    return <main className="min-h-screen bg-gray-900" />;
+    return <main className="min-h-screen" />;
   }
 
   if (!creds) {
+    // No opaque background here. `layout.tsx` renders the animated <Background />
+    // behind everything, and the old `bg-gray-900` painted straight over it —
+    // so the sign-in screen was the one surface in the product that did not look
+    // like the product.
     return (
-      <main className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-4">
-        <LoginForm title={title} onLogin={handleLogin} error={error} setError={setError} />
+      <main className="min-h-screen text-white flex items-center justify-center px-4 py-10">
+        <LoginForm
+          title={title}
+          role={role}
+          onLogin={handleLogin}
+          error={error}
+          setError={setError}
+        />
       </main>
     );
   }
