@@ -9,7 +9,7 @@ import { InputField, SelectField, type SelectOption } from './FormFields';
 import SkuChooser, { SKUS } from './SkuChooser';
 import TrackFields, { type TrackFieldName } from './TrackFields';
 import { type TrackOption } from './registrationTypes';
-import type { EventConfig, FieldOptions } from '@/lib/db/schema';
+import type { EventConfig, FieldOptions, FieldLabels } from '@/lib/db/schema';
 import type { Sku } from '@/lib/pricing/resolvePrice';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -133,6 +133,7 @@ const toOptions = (values: string[]): SelectOption[] =>
 export default function RegistrationForm({
   eventConfig,
   fieldOptions,
+  fieldLabels,
   tracks: initialTracks,
   priceLabels,
   cashfreeMode,
@@ -141,6 +142,8 @@ export default function RegistrationForm({
 }: {
   eventConfig: EventConfig;
   fieldOptions: FieldOptions;
+  /** Labels and placeholders, editable at /admin. Keys are the column names. */
+  fieldLabels: FieldLabels;
   /** Server-rendered availability, so the selects are correct on first paint. */
   tracks: TrackOption[];
   /** Display only. The server computes and stores the real amount. */
@@ -428,28 +431,28 @@ export default function RegistrationForm({
                   onChange={handleTrackChange}
                 />
 
-                <InputField label="Your Name" type="text" placeholder="Enter your full name" name="name" value={formData.name} onChange={handleInputChange} required />
-                <InputField label="Your Email" type="email" placeholder="youremail@domain.com" name="email" value={formData.email} onChange={handleInputChange} required error={formErrors.email} />
-                <InputField label="Contact Number" type="tel" placeholder="9876543210" name="contact" value={formData.contact} onChange={handleInputChange} required error={formErrors.contact} />
+                <InputField label={fieldLabels.name.label} type="text" placeholder={fieldLabels.name.placeholder} name="name" value={formData.name} onChange={handleInputChange} required />
+                <InputField label={fieldLabels.email.label} type="email" placeholder={fieldLabels.email.placeholder} name="email" value={formData.email} onChange={handleInputChange} required error={formErrors.email} />
+                <InputField label={fieldLabels.contact.label} type="tel" placeholder={fieldLabels.contact.placeholder} name="contact" value={formData.contact} onChange={handleInputChange} required error={formErrors.contact} />
 
-                <SelectField label="College" name="college" options={toOptions(fieldOptions.colleges)} value={formData.college} onChange={handleInputChange} required />
+                <SelectField label={fieldLabels.college.label} placeholder={fieldLabels.college.placeholder} name="college" options={toOptions(fieldOptions.colleges)} value={formData.college} onChange={handleInputChange} required />
 
                 {/* Outside NMIMS the course and department lists do not apply, so
                     they become free text rather than forcing a wrong pick. */}
                 {isOtherCollege ? (
                   <>
-                    <InputField label="Course" type="text" placeholder="e.g. B.E. Computer Science" name="course" value={formData.course} onChange={handleInputChange} required />
-                    <InputField label="Department" type="text" placeholder="e.g. Information Technology" name="department" value={formData.department} onChange={handleInputChange} required />
+                    <InputField label={fieldLabels.course.label} type="text" placeholder={fieldLabels.course.placeholder} name="course" value={formData.course} onChange={handleInputChange} required />
+                    <InputField label={fieldLabels.department.label} type="text" placeholder={fieldLabels.department.placeholder} name="department" value={formData.department} onChange={handleInputChange} required />
                   </>
                 ) : (
                   <>
-                    <SelectField label="Course" name="course" options={toOptions(fieldOptions.courses)} value={formData.course} onChange={handleInputChange} required />
-                    <SelectField label="Department" name="department" options={toOptions(fieldOptions.departments)} value={formData.department} onChange={handleInputChange} required />
+                    <SelectField label={fieldLabels.course.label} placeholder={fieldLabels.course.selectPrompt} name="course" options={toOptions(fieldOptions.courses)} value={formData.course} onChange={handleInputChange} required />
+                    <SelectField label={fieldLabels.department.label} placeholder={fieldLabels.department.selectPrompt} name="department" options={toOptions(fieldOptions.departments)} value={formData.department} onChange={handleInputChange} required />
                   </>
                 )}
 
-                <SelectField label="Current Academic Year" name="year" options={toOptions(fieldOptions.years)} value={formData.year} onChange={handleInputChange} required />
-                <InputField label="Referral" type="text" name="referral" placeholder="Optional" value={formData.referral} onChange={handleInputChange} />
+                <SelectField label={fieldLabels.year.label} placeholder={fieldLabels.year.placeholder} name="year" options={toOptions(fieldOptions.years)} value={formData.year} onChange={handleInputChange} required />
+                <InputField label={fieldLabels.referral.label} type="text" name="referral" placeholder={fieldLabels.referral.placeholder} value={formData.referral} onChange={handleInputChange} />
 
                 <div className="mt-12 text-center">
                   {/* Display only. Whatever this says is cosmetic — api/create-order

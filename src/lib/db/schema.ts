@@ -243,6 +243,59 @@ export type FieldOptions = {
   years: string[];
 };
 
+/**
+ * The visible wording of one form field.
+ *
+ * `placeholder` is the grey hint: the HTML placeholder on a text input, and the
+ * unselected prompt on a `<select>`.
+ *
+ * `selectPrompt` exists for exactly two fields. `course` and `department` render
+ * as dropdowns for a known college and as free text once "Other" is picked, so
+ * they are the only fields that need two different hints — "B.Tech" reads well
+ * in an empty text box and badly as a dropdown's unselected state. Every other
+ * field is one control or the other, so `placeholder` alone covers it.
+ */
+export type FieldText = {
+  label: string;
+  placeholder: string;
+  /** Only meaningful for `course` and `department`. Ignored elsewhere. */
+  selectPrompt?: string;
+};
+
+/**
+ * The wording of the registration form, editable at /admin.
+ *
+ * Keys are the DATA names — `course` and `department` are the column names on
+ * `pferegistration` — and are fixed. Only the wording moves. That separation is
+ * the point: the 2026 form labels `course` as "Programme" and `department` as
+ * "Course", and doing that as data means no migration, no deploy, and no risk
+ * of a rename drifting away from the column it describes.
+ */
+export type FieldLabels = {
+  name: FieldText;
+  email: FieldText;
+  contact: FieldText;
+  college: FieldText;
+  course: FieldText;
+  department: FieldText;
+  year: FieldText;
+  referral: FieldText;
+};
+
+/** The shipped wording. Also the shape every admin edit is merged onto. */
+export const DEFAULT_FIELD_LABELS: FieldLabels = {
+  // Worked examples rather than instructions ("Enter your full name"). A filled-in
+  // shape is faster to pattern-match than a sentence telling you to fill it in.
+  name: { label: 'Your Name', placeholder: 'Parth Gupta' },
+  email: { label: 'Your Email', placeholder: 'mail@parthg.me' },
+  contact: { label: 'Contact Number', placeholder: '9406084060' },
+  college: { label: 'College', placeholder: 'Select your option' },
+  course: { label: 'Course', placeholder: 'B.Tech', selectPrompt: 'Select your option' },
+  department: { label: 'Department', placeholder: 'Computer Science', selectPrompt: 'Select your option' },
+  year: { label: 'Current Academic Year', placeholder: 'Select your option' },
+  referral: { label: 'Referral', placeholder: 'Optional' },
+};
+
 export const settings = pgTable('settings', {
   id: integer('id').primaryKey().default(1),
 
@@ -271,8 +324,11 @@ export const settings = pgTable('settings', {
       'Computer Engineering', 'EXTC', 'Cybersecurity', 'AI', 'CSDS 311',
       'Data Science', 'Mechanical', 'IT', 'Civil', 'CSBS', 'Mechatronics', 'CSEDS', 'Other',
     ],
-    years: ['First Year', 'Second Year', 'Third Year', 'Fourth Year', 'Fifth Year'],
+    years: [
+      'First Year', 'Second Year', 'Third Year', 'Fourth Year', 'Fifth Year', 'Sixth Year',
+    ],
   }),
+  fieldLabels: jsonb('field_labels').$type<FieldLabels>().notNull().default(DEFAULT_FIELD_LABELS),
 
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 },

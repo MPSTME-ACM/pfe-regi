@@ -1,11 +1,15 @@
 import ProgramHeader from '@/app/_components/ProgramHeader';
 import PolicyLinks from '@/app/_components/PolicyLinks';
+import BackToRegistration from '@/app/_components/BackToRegistration';
 
 export default function CancellationPolicyPage() {
   const dateRange = 'September 16th - 18th, 2025';
 
   return (
-    <main className="min-h-screen text-white font-sans flex items-center justify-center p-4 sm:p-6 md:p-8">
+    <main className="min-h-screen text-white font-sans flex flex-col items-center justify-center p-4 sm:p-6 md:p-8">
+      <div className="mb-4 w-full max-w-3xl">
+        <BackToRegistration />
+      </div>
       <div className="w-full max-w-3xl bg-black/30 backdrop-blur-md rounded-2xl border border-white/10 p-8 sm:p-10 md:p-12">
         <ProgramHeader dateRange={dateRange} />
 

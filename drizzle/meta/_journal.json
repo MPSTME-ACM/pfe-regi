@@ -71,6 +71,13 @@
       "when": 1786342382162,
       "tag": "0009_coupons_and_referrers",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1786360949455,
+      "tag": "0010_add_field_labels",
+      "breakpoints": true
     }
   ]
 }

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import AdminGate, { clearStoredCreds } from '@/components/admin/AdminGate';
 import { TracksTab, useTracksEditor } from '@/components/admin/TracksTab';
 import { CouponsTab, useCouponsEditor } from '@/components/admin/CouponsTab';
-import type { EventConfig, FieldOptions, Settings } from '@/lib/db/schema';
+import type { EventConfig, FieldOptions, FieldLabels, FieldText, Settings } from '@/lib/db/schema';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Admin panel.
@@ -84,6 +84,88 @@ function Field({
 }
 
 /** The sentence that opens a tab. Sets context, then gets out of the way. */
+/**
+ * Which form fields are editable, in the order they appear on the form.
+ *
+ * `control` decides how many boxes a row shows, not what the field does. Only
+ * `course` and `department` are `both`: they render as a dropdown for a known
+ * college and as free text once "Other" is picked, so they need a separate hint
+ * for each. See FieldText in db/schema.
+ */
+const FIELD_ROWS: { key: keyof FieldLabels; control: 'text' | 'select' | 'both'; hint?: string }[] = [
+  { key: 'name', control: 'text' },
+  { key: 'email', control: 'text' },
+  { key: 'contact', control: 'text' },
+  { key: 'college', control: 'select', hint: 'Options are edited below.' },
+  { key: 'course', control: 'both', hint: 'Stored in the `course` column. Options are edited below.' },
+  { key: 'department', control: 'both', hint: 'Stored in the `department` column. Options are edited below.' },
+  { key: 'year', control: 'select', hint: 'Options are edited below.' },
+  { key: 'referral', control: 'text' },
+];
+
+/**
+ * One field's wording. The data key is shown as a fixed monospace tag beside the
+ * inputs, because the whole point of this screen is that the label can be
+ * anything while the column it writes to cannot — an admin renaming "Course" to
+ * "Programme" needs to see that it is still `course` underneath.
+ */
+function WordingRow({
+  fieldKey,
+  control,
+  hint,
+  value,
+  onChange,
+}: {
+  fieldKey: string;
+  control: 'text' | 'select' | 'both';
+  hint?: string;
+  value: FieldText;
+  onChange: (patch: Partial<FieldText>) => void;
+}) {
+  const placeholderLabel = control === 'select' ? 'Unselected prompt' : 'Placeholder';
+
+  return (
+    <div className="rounded-xl border border-hairline bg-white/[0.02] p-4">
+      <div className="mb-3 flex items-baseline justify-between gap-3">
+        <code className="rounded bg-white/[0.06] px-1.5 py-0.5 font-mono text-xs text-accent-soft">
+          {fieldKey}
+        </code>
+        {hint && <span className="text-right text-[11px] leading-tight text-gray-500">{hint}</span>}
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <span className={label}>Label</span>
+          <input
+            className={input}
+            value={value.label}
+            onChange={(e) => onChange({ label: e.target.value })}
+          />
+        </div>
+        <div>
+          <span className={label}>{placeholderLabel}</span>
+          <input
+            className={input}
+            value={value.placeholder}
+            onChange={(e) => onChange({ placeholder: e.target.value })}
+          />
+        </div>
+        {control === 'both' && (
+          <div className="sm:col-span-2">
+            <span className={label}>Unselected prompt (dropdown mode)</span>
+            <input
+              className={input}
+              value={value.selectPrompt ?? ''}
+              placeholder="Select your option"
+              onChange={(e) => onChange({ selectPrompt: e.target.value })}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function Lead({ children }: { children: React.ReactNode }) {
   return (
     <p className="mb-6 max-w-[68ch] border-b border-hairline pb-5 text-sm leading-relaxed text-gray-400">
@@ -293,6 +375,11 @@ function Panel({ creds, logout }: { creds: string; logout: () => void }) {
     setDraft((d) => (d ? { ...d, eventConfig: { ...d.eventConfig, ...p } } : d));
   const patchFields = (p: Partial<FieldOptions>) =>
     setDraft((d) => (d ? { ...d, fieldOptions: { ...d.fieldOptions, ...p } } : d));
+  /** Merge into ONE field's wording. Keys are column names and never change. */
+  const patchLabel = (key: keyof FieldLabels, p: Partial<FieldText>) =>
+    setDraft((d) =>
+      d ? { ...d, fieldLabels: { ...d.fieldLabels, [key]: { ...d.fieldLabels[key], ...p } } } : d,
+    );
 
   if (!draft) {
     return (
@@ -515,26 +602,49 @@ function Panel({ creds, logout }: { creds: string; logout: () => void }) {
 
           {tab === 'fields' && (
             <section>
-              <Lead>One option per line. Order is preserved.</Lead>
-              <Field text="Colleges" hint="Keep an 'Other' entry — it drives the free-text fallback.">
+              <Lead>
+                What registrants read. The data keys beside each row are the database columns and
+                never change, so renaming a label is safe — but the Google Sheet, /stats and the
+                registration list still use the column names, and will keep saying &ldquo;course&rdquo;
+                and &ldquo;department&rdquo;.
+              </Lead>
+
+              <div className="mb-9 space-y-3">
+                {FIELD_ROWS.map(({ key, control, hint }) => (
+                  <WordingRow
+                    key={key}
+                    fieldKey={key}
+                    control={control}
+                    hint={hint}
+                    value={draft.fieldLabels[key]}
+                    onChange={(p) => patchLabel(key, p)}
+                  />
+                ))}
+              </div>
+
+              <Lead>Dropdown contents. One option per line. Order is preserved.</Lead>
+              <Field
+                text={`${draft.fieldLabels.college.label} options`}
+                hint="Keep an 'Other' entry — it drives the free-text fallback."
+              >
                 <ListEditor
                   value={draft.fieldOptions.colleges}
                   onChange={(v) => patchFields({ colleges: v })}
                 />
               </Field>
-              <Field text="Courses">
+              <Field text={`${draft.fieldLabels.course.label} options`} hint="Column: course">
                 <ListEditor
                   value={draft.fieldOptions.courses}
                   onChange={(v) => patchFields({ courses: v })}
                 />
               </Field>
-              <Field text="Departments">
+              <Field text={`${draft.fieldLabels.department.label} options`} hint="Column: department">
                 <ListEditor
                   value={draft.fieldOptions.departments}
                   onChange={(v) => patchFields({ departments: v })}
                 />
               </Field>
-              <Field text="Academic years">
+              <Field text={`${draft.fieldLabels.year.label} options`}>
                 <ListEditor value={draft.fieldOptions.years} onChange={(v) => patchFields({ years: v })} />
               </Field>
             </section>

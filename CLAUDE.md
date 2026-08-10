@@ -16,7 +16,7 @@ pnpm lint                    # bare `eslint`, flat config
 pnpm exec drizzle-kit generate | migrate | push | studio
 ```
 
-**After pulling a schema change, run `pnpm exec drizzle-kit migrate`.** `0006` creates and seeds `settings`; `0007` archives 2025 into `pferegistration_2025`, clears the live table and adds the 2026 columns; `0008` drops `domain` and seeds the seven tracks. Without them `/admin` errors and the home page falls back to "registration closed".
+**After pulling a schema change, run `pnpm exec drizzle-kit migrate`.** `0006` creates and seeds `settings`; `0007` archives 2025 into `pferegistration_2025`, clears the live table and adds the 2026 columns; `0008` drops `domain` and seeds the seven tracks; `0010` adds `field_labels` and appends "Sixth Year" to the existing row (a changed column DEFAULT does not touch rows that already exist, and `settings` is a singleton that always does). Without them `/admin` errors and the home page falls back to "registration closed".
 
 **`drizzle-kit generate` cannot run non-interactively here.** When a table has both added and dropped columns in one diff it prompts "created or renamed?", and it reads raw keypresses — piping input hangs forever. Split such a change into two migrations (adds first, drops second), as `0007`/`0008` do.
 
@@ -54,6 +54,9 @@ All in `src/lib/db/schema.ts`.
 **`tracks`** — the seven 2026 tracks. A table rather than JSON on `settings` because capacity is checked under `SELECT … FOR UPDATE`, and you cannot row-lock a JSON key.
 
 **`settings`** — the singleton config row behind `/admin`.
+- `fieldOptions` holds the dropdown contents; `fieldLabels` holds the **wording** — one `{label, placeholder, selectPrompt?}` per form field. Its keys are the **column names** (`course`, `department`, …) and are fixed; only what registrants read is editable, so rewording a field needs no migration and no deploy. **If you do rename one, the Google Sheet, `/stats` and the registration list keep using the column names** and will disagree with the form — a "Programme"/"Course" swap was tried and reverted for exactly that reason.
+- `selectPrompt` exists only for `course` and `department` — the two fields that render as a dropdown for a known college and as free text once "Other" is picked, so they need two different hints. Everything else needs one.
+- `getSettings()` merges stored labels over `DEFAULT_FIELD_LABELS` via `withLabelDefaults()`. Without it a row written before a field existed renders the string "undefined" as that field's label.
 
 **`pferegistration_2025`** — the archive. Read-only; 2025 QR codes still resolve against it via `src/lib/registration/lookupTicket.ts`.
 

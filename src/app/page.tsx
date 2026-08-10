@@ -61,6 +61,7 @@ export default async function Home() {
     <RegistrationForm
       eventConfig={{ ...settings.eventConfig }}
       fieldOptions={{ ...settings.fieldOptions }}
+      fieldLabels={{ ...settings.fieldLabels }}
       tracks={tracks}
       priceLabels={priceLabels}
       cashfreeMode={process.env.CASHFREE_ENV === 'PRODUCTION' ? 'production' : 'sandbox'}

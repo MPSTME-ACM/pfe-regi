@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { settings, type Settings } from '@/lib/db/schema';
+import { settings, DEFAULT_FIELD_LABELS, type Settings, type FieldLabels } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 /**
@@ -41,10 +41,29 @@ export const FALLBACK_SETTINGS: Settings = {
       'Computer Engineering', 'EXTC', 'Cybersecurity', 'AI', 'CSDS 311',
       'Data Science', 'Mechanical', 'IT', 'Civil', 'CSBS', 'Mechatronics', 'CSEDS', 'Other',
     ],
-    years: ['First Year', 'Second Year', 'Third Year', 'Fourth Year', 'Fifth Year'],
+    years: [
+      'First Year', 'Second Year', 'Third Year', 'Fourth Year', 'Fifth Year', 'Sixth Year',
+    ],
   },
+  fieldLabels: DEFAULT_FIELD_LABELS,
   updatedAt: new Date(0),
 };
+
+/**
+ * Fill any missing field wording from the defaults.
+ *
+ * The stored value is a single jsonb blob, so a row written before a field was
+ * added — or by an older deploy — is missing that key entirely. Without this the
+ * form would render `undefined` as a label. Per-field rather than a shallow
+ * spread, so a row that customises only `label` still inherits `placeholder`.
+ */
+export function withLabelDefaults(stored: Partial<FieldLabels> | null | undefined): FieldLabels {
+  const out = {} as FieldLabels;
+  for (const key of Object.keys(DEFAULT_FIELD_LABELS) as (keyof FieldLabels)[]) {
+    out[key] = { ...DEFAULT_FIELD_LABELS[key], ...(stored?.[key] ?? {}) };
+  }
+  return out;
+}
 
 /**
  * Read the settings row. Never throws — callers on the render path should not
@@ -53,7 +72,12 @@ export const FALLBACK_SETTINGS: Settings = {
 export async function getSettings(): Promise<Settings> {
   try {
     const rows = await db.select().from(settings).where(eq(settings.id, SETTINGS_ID)).limit(1);
-    return rows[0] ?? FALLBACK_SETTINGS;
+    if (!rows[0]) return FALLBACK_SETTINGS;
+    // Normalised here rather than at each call site so the form, the admin panel
+    // and anything added later all see a complete object. A row written before
+    // `field_labels` existed reads back as null, and an undefined label renders
+    // as the literal string "undefined" next to a required field.
+    return { ...rows[0], fieldLabels: withLabelDefaults(rows[0].fieldLabels) };
   } catch (error) {
     console.error('[settings] read failed, falling back to closed:', error);
     return FALLBACK_SETTINGS;
