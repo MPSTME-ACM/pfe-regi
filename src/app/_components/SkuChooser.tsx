@@ -1,13 +1,14 @@
 'use client';
 
 import React from 'react';
+import OptionCard from './OptionCard';
 import type { Sku } from '@/lib/pricing/resolvePrice';
 
 // The single most important choice on the page, so it is three real radio
 // inputs in a fieldset rather than a <select>: every option is visible at once,
 // arrow keys move between them, and the price of each is legible without
-// interacting. The inputs are `sr-only` and the card is the label, so the native
-// semantics survive intact while the card carries the styling.
+// interacting. The card markup itself lives in OptionCard, shared with the track
+// pickers below so the two controls cannot drift apart.
 
 /**
  * Display order, and it is deliberate.
@@ -58,45 +59,20 @@ export default function SkuChooser({
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {SKUS.map((sku) => {
           const { title, when, blurb, badge } = COPY[sku];
-          const selected = value === sku;
           return (
-            <label
+            <OptionCard
               key={sku}
-              className={[
-                'relative flex cursor-pointer flex-col rounded-xl border p-4 transition-colors duration-200',
-                'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[#f8c8fc]',
-                selected
-                  ? 'border-[#e97bfc] bg-[#e97bfc]/10 ring-1 ring-[#e97bfc]'
-                  : 'border-white/20 bg-white/5 hover:border-white/40 hover:bg-white/10',
-              ].join(' ')}
-            >
-              <input
-                type="radio"
-                name="sku"
-                value={sku}
-                checked={selected}
-                onChange={() => onChange(sku)}
-                required
-                // Transparent but full-size and stacked over the card, rather
-                // than `sr-only`: the whole card is then the radio's own hit
-                // area, so a tap anywhere on it lands on the input itself and
-                // not on a label that has to forward the click.
-                className="absolute inset-0 h-full w-full cursor-pointer appearance-none rounded-xl opacity-0 focus:outline-none"
-              />
-              <span className="flex items-baseline justify-between gap-2">
-                <span className="font-semibold text-[#f8c8fc]">{title}</span>
-                <span className="text-lg font-bold whitespace-nowrap text-white">
-                  {priceLabels[sku]}
-                </span>
-              </span>
-              <span className="mt-0.5 text-xs text-gray-400">{when}</span>
-              <span className="mt-2 text-xs leading-relaxed text-gray-500">{blurb}</span>
-              {badge && (
-                <span className="mt-3 self-start rounded-full bg-[#e97bfc]/20 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-[#f8c8fc] uppercase">
-                  {badge}
-                </span>
-              )}
-            </label>
+              name="sku"
+              value={sku}
+              checked={value === sku}
+              onSelect={(v) => onChange(v as Sku)}
+              title={title}
+              trailing={priceLabels[sku]}
+              when={when}
+              blurb={blurb}
+              badge={badge}
+              required
+            />
           );
         })}
       </div>
