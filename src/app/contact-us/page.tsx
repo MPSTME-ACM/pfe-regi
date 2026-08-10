@@ -2,9 +2,13 @@ import Link from 'next/link';
 import ProgramHeader from '@/app/_components/ProgramHeader';
 import PolicyLinks from '@/app/_components/PolicyLinks';
 import BackToRegistration from '@/app/_components/BackToRegistration';
+import { getSettings } from '@/lib/settings';
 
-export default function ContactUsPage() {
-  const dateRange = 'September 16th - 18th, 2025';
+// See about-us: force-dynamic or the build bakes the fallback date.
+export const dynamic = 'force-dynamic';
+
+export default async function ContactUsPage() {
+  const { eventConfig } = await getSettings();
 
   return (
     <main className="min-h-screen text-white font-sans flex flex-col items-center justify-center p-4 sm:p-6 md:p-8">
@@ -12,7 +16,7 @@ export default function ContactUsPage() {
         <BackToRegistration />
       </div>
       <div className="w-full max-w-3xl bg-black/30 backdrop-blur-md rounded-2xl border border-white/10 p-8 sm:p-10 md:p-12">
-        <ProgramHeader dateRange={dateRange} />
+        <ProgramHeader dateRange={eventConfig.dateRange} />
 
         <div className="text-center mt-10 mb-8">
           <h1 className="text-4xl sm:text-5xl font-extrabold text-accent-soft mb-4 leading-tight">

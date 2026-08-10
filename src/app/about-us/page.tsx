@@ -1,9 +1,16 @@
 import ProgramHeader from '@/app/_components/ProgramHeader';
 import PolicyLinks from '@/app/_components/PolicyLinks';
 import BackToRegistration from '@/app/_components/BackToRegistration';
+import { getSettings } from '@/lib/settings';
 
-export default function AboutUsPage() {
-  const dateRange = 'September 16th - 18th, 2025';
+// Same reason as src/app/page.tsx: without this Next prerenders at BUILD time,
+// where there is no database, so `getSettings()` would fall back and the fallback
+// date would be baked into the bundle. That is how these pages came to advertise
+// September 2025 — a hardcoded date nobody thought to look at again.
+export const dynamic = 'force-dynamic';
+
+export default async function AboutUsPage() {
+  const { eventConfig } = await getSettings();
 
   return (
     <main className="min-h-screen text-white font-sans flex flex-col items-center justify-center p-4 sm:p-6 md:p-8">
@@ -11,7 +18,7 @@ export default function AboutUsPage() {
         <BackToRegistration />
       </div>
       <div className="w-full max-w-3xl bg-black/30 backdrop-blur-md rounded-2xl border border-white/10 p-8 sm:p-10 md:p-12">
-        <ProgramHeader dateRange={dateRange} />
+        <ProgramHeader dateRange={eventConfig.dateRange} />
 
         <div className="text-center mt-10 mb-8">
           <h1 className="text-4xl sm:text-5xl font-extrabold text-accent-soft mb-4 leading-tight">

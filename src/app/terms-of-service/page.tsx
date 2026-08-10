@@ -1,9 +1,13 @@
 import ProgramHeader from '@/app/_components/ProgramHeader';
 import PolicyLinks from '@/app/_components/PolicyLinks';
 import BackToRegistration from '@/app/_components/BackToRegistration';
+import { getSettings } from '@/lib/settings';
 
-export default function TermsOfServicePage() {
-  const dateRange = 'September 16th - 18th, 2025';
+// See about-us: force-dynamic or the build bakes the fallback date.
+export const dynamic = 'force-dynamic';
+
+export default async function TermsOfServicePage() {
+  const { eventConfig } = await getSettings();
 
   return (
     <main className="min-h-screen text-white font-sans flex flex-col items-center justify-center p-4 sm:p-6 md:p-8">
@@ -11,7 +15,7 @@ export default function TermsOfServicePage() {
         <BackToRegistration />
       </div>
       <div className="w-full max-w-3xl bg-black/30 backdrop-blur-md rounded-2xl border border-white/10 p-8 sm:p-10 md:p-12">
-        <ProgramHeader dateRange={dateRange} />
+        <ProgramHeader dateRange={eventConfig.dateRange} />
 
         <div className="text-center mt-10 mb-8">
           <h1 className="text-4xl sm:text-5xl font-extrabold text-accent-soft mb-4 leading-tight">
@@ -44,7 +48,12 @@ export default function TermsOfServicePage() {
 
           <div>
             <h2 className="text-2xl font-bold text-accent-soft mb-2">5. Shipping and Delivery</h2>
-            <p>The PFE Workshop will be conducted <strong>offline</strong> at the <strong>Mukesh Patel School of Technology Management & Engineering, Mumbai campus</strong> on the <strong>16<sup>th</sup>, 17<sup>th</sup>, and 18<sup>th</sup> of September 2025</strong>. As this is an in-person event, there are <strong>no physical products</strong> being shipped. The exact classroom venue and event logistics will be communicated through a dedicated WhatsApp group, which will be created by <strong>13<sup>th</sup> September 2025</strong>. There are no shipping or delivery charges applicable.</p>
+            {/* Dates and venue come from settings so this paragraph cannot drift
+                from the header above it, or from the confirmation email. The
+                WhatsApp group's creation date was previously a fixed calendar
+                date; it is relative now, because nothing in settings records it
+                and an invented date in a policy is worse than no date. */}
+            <p>The PFE Workshop will be conducted <strong>offline</strong> at <strong>{eventConfig.venue}</strong> on <strong>{eventConfig.dateRange}</strong>. As this is an in-person event, there are <strong>no physical products</strong> being shipped. The exact classroom venue and event logistics will be communicated through a dedicated WhatsApp group, created in the days before the program begins. There are no shipping or delivery charges applicable.</p>
           </div>
         </div>
 
