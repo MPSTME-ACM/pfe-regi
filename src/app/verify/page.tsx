@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 // initial bundle for a screen that spends most of its life showing one ticket.
 import type { Html5QrcodeScanner, QrcodeSuccessCallback } from "html5-qrcode"
 import AdminGate from "@/components/admin/AdminGate"
+import BackToAdmin from "@/components/admin/BackToAdmin"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // The door scanner.
@@ -40,7 +41,7 @@ interface TicketView {
 
 const PAID_STATUSES = ["success", "comped"]
 
-const CARD = "w-full bg-black/30 backdrop-blur-md rounded-2xl border border-white/10"
+const CARD = "w-full bg-panel-raised rounded-2xl border border-hairline"
 
 /** Full-width primary. One per screen, and always the thing to do next. */
 const PRIMARY =
@@ -128,10 +129,10 @@ const QrScanner = ({
   return (
     <div className={`${CARD} p-4 sm:p-6`}>
       <h2 className="text-lg font-semibold text-accent-soft mb-1 text-center">Scan ticket</h2>
-      <p className="text-center text-gray-400 text-sm mb-4">Align the QR inside the square.</p>
+      <p className="text-center text-gray-300 text-sm mb-4">Align the QR inside the square.</p>
       <div
         id="reader"
-        className="w-full bg-white/5 rounded-xl overflow-hidden border border-white/15"
+        className="w-full bg-white/5 rounded-xl overflow-hidden border border-hairline"
         aria-label="QR code scanner"
       />
       <button onClick={onStop} className={`${SECONDARY} mt-5`}>
@@ -162,8 +163,8 @@ const QrScanner = ({
         }
         #reader button:hover,
         #reader a:hover {
-          background: rgba(233, 123, 252, 0.12) !important;
-          border-color: rgba(233, 123, 252, 0.45) !important;
+          background: color-mix(in srgb, var(--color-accent) 12%, transparent) !important;
+          border-color: color-mix(in srgb, var(--color-accent) 45%, transparent) !important;
         }
         #reader .html5-qrcode-anchor-scan-type-change {
           margin-top: 8px !important;
@@ -340,8 +341,8 @@ const TicketPanel = ({
   if (loading) {
     return (
       <div className={`${CARD} p-10 flex flex-col items-center gap-4`}>
-        <span className="block h-10 w-10 rounded-full border-[3px] border-white/15 border-t-accent animate-spin [animation-duration:0.9s] motion-reduce:animate-none" />
-        <p className="text-gray-400">Looking up ticket…</p>
+        <span className="block h-10 w-10 rounded-full border-[3px] border-hairline border-t-accent animate-spin [animation-duration:0.9s] motion-reduce:animate-none" />
+        <p className="text-gray-300">Looking up ticket…</p>
       </div>
     )
   }
@@ -357,7 +358,7 @@ const TicketPanel = ({
           detail={error}
         />
         <div>
-          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-gray-500">Scanned code</p>
+          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-gray-400">Scanned code</p>
           <p className="mt-1 font-mono text-sm text-gray-300 break-all">{orderId}</p>
         </div>
       </div>
@@ -375,7 +376,7 @@ const TicketPanel = ({
       <div>
         <p className="text-2xl font-bold text-white leading-tight break-words">{ticket.name}</p>
         <p className="mt-1.5 font-medium text-accent-soft">{ticket.description}</p>
-        <p className="mt-1.5 text-sm text-gray-400">
+        <p className="mt-1.5 text-sm text-gray-300">
           {[ticket.year, ticket.course, ticket.department].filter(Boolean).join(" · ") || "—"}
         </p>
         {/* Read aloud when something needs sorting out, so it is not the faintest
@@ -383,18 +384,18 @@ const TicketPanel = ({
         <p className="mt-3 font-mono text-sm tracking-wide text-gray-300 break-all">{ticket.orderId}</p>
       </div>
 
-      <div className="border-t border-white/10 pt-5">
+      <div className="border-t border-hairline pt-5">
         <div className="mb-3 flex items-baseline justify-between gap-3">
           <h2 className="text-lg font-semibold text-white">
             {ticket.readOnly ? "Attendance record" : "Mark attendance"}
           </h2>
           {days.length > 0 && (
-            <span className="shrink-0 text-sm font-semibold text-gray-400">
+            <span className="shrink-0 text-sm font-semibold text-gray-300">
               {marked}/{days.length} present
             </span>
           )}
         </div>
-        <p className="text-sm text-gray-500 mb-3">
+        <p className="text-sm text-gray-400 mb-3">
           {ticket.readOnly
             ? "Archived 2025 record. Attendance cannot be changed."
             : `${ticket.days.length} ${ticket.days.length === 1 ? "day" : "days"} on this ticket.`}
@@ -402,17 +403,17 @@ const TicketPanel = ({
 
         <div className="space-y-3">
           {days.length === 0 && (
-            <p className="text-sm text-gray-500">No attendance days on this registration.</p>
+            <p className="text-sm text-gray-400">No attendance days on this registration.</p>
           )}
           {days.map((day) => (
             <label
               key={day.key}
               className={`flex items-center gap-4 min-h-[4.5rem] px-4 rounded-xl border transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent-soft ${
                 ticket.readOnly
-                  ? "border-white/10 bg-white/[0.03] cursor-not-allowed"
+                  ? "border-hairline bg-white/[0.03] cursor-not-allowed"
                   : day.present
                     ? "border-green-400/60 bg-green-500/15 cursor-pointer"
-                    : "border-white/20 bg-white/5 cursor-pointer active:bg-white/10"
+                    : "border-hairline bg-white/5 cursor-pointer active:bg-white/10"
               }`}
             >
               {/* The native control carries the semantics; the box beside it is
@@ -430,7 +431,7 @@ const TicketPanel = ({
                 className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border-2 transition-colors ${
                   day.present
                     ? "border-green-400 bg-green-400 text-black"
-                    : "border-white/40 bg-white/5 text-transparent"
+                    : "border-hairline bg-white/5 text-transparent"
                 } ${ticket.readOnly ? "opacity-60" : ""}`}
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3.5} className="h-5 w-5">
@@ -444,7 +445,7 @@ const TicketPanel = ({
               </span>
               <span
                 className={`text-sm font-bold uppercase tracking-wide ${
-                  day.present ? "text-green-300" : "text-gray-500"
+                  day.present ? "text-green-300" : "text-gray-400"
                 }`}
               >
                 {day.present ? "Present" : "Absent"}
@@ -540,20 +541,23 @@ const VerifyScreen = ({ creds, logout }: { creds: string; logout: () => void }) 
   }
 
   return (
-    <main className="min-h-screen text-white px-4 py-4 font-sans">
+    <main className="min-h-screen bg-panel text-white px-4 py-4 font-sans">
       <div className="w-full max-w-md mx-auto">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-xl font-bold text-accent-soft">PFE Door Check</h1>
-          <button
-            onClick={() => {
-              window.history.pushState({}, "", "/verify")
-              setOrderId(null)
-              logout()
-            }}
-            className="min-h-11 px-4 text-sm text-gray-300 hover:text-white bg-black/30 rounded-lg border border-white/10 focus:outline-none focus:ring-2 focus:ring-accent-soft/60 transition"
-          >
-            Log out
-          </button>
+          <div className="flex items-center gap-2">
+            <BackToAdmin />
+            <button
+              onClick={() => {
+                window.history.pushState({}, "", "/verify")
+                setOrderId(null)
+                logout()
+              }}
+              className="min-h-11 px-4 text-sm text-gray-300 hover:text-white bg-panel-raised rounded-lg border border-hairline focus:outline-none focus:ring-2 focus:ring-accent-soft/60 transition"
+            >
+              Log out
+            </button>
+          </div>
         </div>
 
         {scanError && (
@@ -581,7 +585,7 @@ const VerifyScreen = ({ creds, logout }: { creds: string; logout: () => void }) 
               </svg>
             </span>
             <h2 className="mt-5 text-2xl font-bold text-white">Ready to verify</h2>
-            <p className="mt-2 mb-6 text-gray-400">Scan a ticket QR to check it in.</p>
+            <p className="mt-2 mb-6 text-gray-300">Scan a ticket QR to check it in.</p>
             <button
               onClick={() => {
                 setScanError("")

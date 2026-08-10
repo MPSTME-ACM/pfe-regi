@@ -16,6 +16,7 @@ import {
   type ChartOptions,
 } from 'chart.js';
 import AdminGate from '@/components/admin/AdminGate';
+import BackToAdmin from '@/components/admin/BackToAdmin';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Registration statistics.
@@ -41,7 +42,7 @@ ChartJS.register(
   Filler
 );
 
-ChartJS.defaults.color = '#9ca3af'; // gray-400: axis ticks and legends
+ChartJS.defaults.color = '#d1d5db'; // gray-300: axis ticks and legends
 ChartJS.defaults.font.size = 12;
 
 interface StatsResponse {
@@ -92,12 +93,12 @@ const hue = (i: number, count: number) =>
 const CONFIRMED = '#e97bfc';
 const AWAITING = '#fbbf24';
 
-const GRID = 'rgba(255,255,255,0.06)';
-const AXIS_BORDER = 'rgba(255,255,255,0.12)';
+const GRID = 'rgba(255,255,255,0.08)';
+const AXIS_BORDER = 'rgba(255,255,255,0.15)';
 
 const tooltipStyle = {
-  backgroundColor: 'rgba(12,10,16,0.94)',
-  borderColor: 'rgba(255,255,255,0.12)',
+  backgroundColor: 'rgba(40,40,45,0.96)',
+  borderColor: 'rgba(255,255,255,0.15)',
   borderWidth: 1,
   titleColor: '#f8c8fc',
   bodyColor: '#e5e7eb',
@@ -155,16 +156,19 @@ function StatsPanel({ creds, logout }: { creds: string; logout: () => void }) {
   }, [creds]);
 
   return (
-    <main className="min-h-screen text-white px-4 py-8 sm:px-6 sm:py-10">
+    <main className="min-h-screen bg-panel text-white px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto w-full max-w-6xl">
         <header className="mb-7 flex flex-wrap items-start justify-between gap-4">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Admin Statistics</h1>
-          <button
-            onClick={logout}
-            className="inline-flex min-h-11 items-center rounded-lg border border-white/10 bg-white/5 px-4 text-sm font-medium text-gray-300 transition-colors hover:border-white/20 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-soft"
-          >
-            Logout
-          </button>
+          <div className="flex items-center gap-2">
+            <BackToAdmin />
+            <button
+              onClick={logout}
+              className="inline-flex min-h-11 items-center rounded-lg border border-hairline bg-white/5 px-4 text-sm font-medium text-gray-300 transition-colors hover:border-hairline/80 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-soft"
+            >
+              Logout
+            </button>
+          </div>
         </header>
 
         {loading && <Skeleton />}
@@ -206,25 +210,29 @@ function Dashboard({ stats }: { stats: StatsResponse }) {
         >
           {/* Horizontal: seven track names read straight at 375px instead of
               being rotated 45° and clipped. */}
-          <ChartBox height="h-[320px] sm:h-[340px]">
-            <Bar
-              data={{
-                labels: trackLabels,
-                datasets: [
-                  {
-                    label: 'Seats sold',
-                    data: trackValues,
-                    backgroundColor: trackLabels.map((_, i) => hue(i, trackLabels.length)),
-                    hoverBackgroundColor: trackLabels.map((_, i) => hue(i, trackLabels.length)),
-                    borderRadius: 5,
-                    borderSkipped: false,
-                    maxBarThickness: 26,
-                  },
-                ],
-              }}
-              options={horizontalBarOptions}
-            />
-          </ChartBox>
+          {trackValues.every(v => v === 0) ? (
+            <EmptyState message="No seats sold yet." />
+          ) : (
+            <ChartBox height="h-[320px] sm:h-[340px]">
+              <Bar
+                data={{
+                  labels: trackLabels,
+                  datasets: [
+                    {
+                      label: 'Seats sold',
+                      data: trackValues,
+                      backgroundColor: trackLabels.map((_, i) => hue(i, trackLabels.length)),
+                      hoverBackgroundColor: trackLabels.map((_, i) => hue(i, trackLabels.length)),
+                      borderRadius: 5,
+                      borderSkipped: false,
+                      maxBarThickness: 26,
+                    },
+                  ],
+                }}
+                options={horizontalBarOptions}
+              />
+            </ChartBox>
+          )}
         </Card>
 
         <Card title="Registration status">
@@ -251,53 +259,61 @@ function Dashboard({ stats }: { stats: StatsResponse }) {
 
       <section className="grid gap-4 lg:grid-cols-3">
         <Card title="Daily registrations" note="Last 10 days" className="lg:col-span-2">
-          <ChartBox height="h-[280px] sm:h-[300px]">
-            <Line
-              data={{
-                labels: dayLabels,
-                datasets: [
-                  {
-                    label: 'Successful',
-                    data: dayKeys.map((d) => stats.daily[d].success),
-                    borderColor: CONFIRMED,
-                    backgroundColor: 'rgba(233,123,252,0.14)',
-                    pointBackgroundColor: CONFIRMED,
-                    fill: true,
-                  },
-                  {
-                    label: 'Pending',
-                    data: dayKeys.map((d) => stats.daily[d].pending),
-                    borderColor: AWAITING,
-                    backgroundColor: 'rgba(251,191,36,0.12)',
-                    pointBackgroundColor: AWAITING,
-                    fill: true,
-                  },
-                ],
-              }}
-              options={lineOptions(dayKeys)}
-            />
-          </ChartBox>
+          {Object.values(stats.daily).every(d => d.success === 0 && d.pending === 0) ? (
+            <EmptyState message="No registrations in the last 10 days." />
+          ) : (
+            <ChartBox height="h-[280px] sm:h-[300px]">
+              <Line
+                data={{
+                  labels: dayLabels,
+                  datasets: [
+                    {
+                      label: 'Successful',
+                      data: dayKeys.map((d) => stats.daily[d].success),
+                      borderColor: CONFIRMED,
+                      backgroundColor: 'rgba(233,123,252,0.14)',
+                      pointBackgroundColor: CONFIRMED,
+                      fill: true,
+                    },
+                    {
+                      label: 'Pending',
+                      data: dayKeys.map((d) => stats.daily[d].pending),
+                      borderColor: AWAITING,
+                      backgroundColor: 'rgba(251,191,36,0.12)',
+                      pointBackgroundColor: AWAITING,
+                      fill: true,
+                    },
+                  ],
+                }}
+                options={lineOptions(dayKeys)}
+              />
+            </ChartBox>
+          )}
         </Card>
 
         <Card title="Year-wise registrations" note="Successful registrations">
-          <ChartBox height="h-[280px] sm:h-[300px]">
-            <Doughnut
-              data={{
-                labels: yearLabels,
-                datasets: [
-                  {
-                    label: 'Registrations',
-                    data: yearValues,
-                    backgroundColor: yearLabels.map((_, i) => hue(i, yearLabels.length)),
-                    borderColor: 'rgba(10,10,14,0.9)',
-                    borderWidth: 2,
-                    hoverOffset: 6,
-                  },
-                ],
-              }}
-              options={doughnutOptions}
-            />
-          </ChartBox>
+          {yearLabels.length === 0 ? (
+            <EmptyState message="No data available." />
+          ) : (
+            <ChartBox height="h-[280px] sm:h-[300px]">
+              <Doughnut
+                data={{
+                  labels: yearLabels,
+                  datasets: [
+                    {
+                      label: 'Registrations',
+                      data: yearValues,
+                      backgroundColor: yearLabels.map((_, i) => hue(i, yearLabels.length)),
+                      borderColor: 'rgba(57,57,57,0.9)',
+                      borderWidth: 2,
+                      hoverOffset: 6,
+                    },
+                  ],
+                }}
+                options={doughnutOptions}
+              />
+            </ChartBox>
+          )}
         </Card>
       </section>
     </div>
@@ -314,9 +330,9 @@ function Summary({ stats }: { stats: StatsResponse }) {
   const successW = empty ? 0 : (stats.total / stats.totalAll) * 100;
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-black/30 p-5 backdrop-blur-md sm:p-6">
+    <section className="rounded-2xl border border-hairline bg-panel-raised p-5 sm:p-6">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h2 className="text-sm font-medium uppercase tracking-wider text-gray-400">
+        <h2 className="text-sm font-medium uppercase tracking-wider text-gray-300">
           Total registered
         </h2>
         <span className="text-3xl font-semibold tabular-nums text-white">
@@ -325,16 +341,21 @@ function Summary({ stats }: { stats: StatsResponse }) {
       </div>
 
       {empty ? (
-        <p className="mt-3 text-sm text-gray-500">No registrations yet.</p>
+        <p className="mt-3 text-sm text-gray-400">No registrations yet.</p>
       ) : (
         <>
           <div
-            className="mt-5 flex h-2.5 w-full overflow-hidden rounded-full bg-white/[0.07]"
+            className="mt-5 flex h-2.5 w-full overflow-hidden rounded-full bg-white/[0.08]"
             role="img"
             aria-label={`${stats.successPercent}% successful, ${stats.pendingPercent}% pending`}
           >
+            {/* Only the confirmed portion is filled; the rest stays the neutral
+                rail. Filling the remainder amber meant that a day with one
+                pending registration and no confirmed ones rendered as a solid
+                full-width amber bar, which reads as an alarm rather than as
+                "nothing has settled yet". The pending count is in the legend
+                below, where a number belongs. */}
             <div style={{ width: `${successW}%`, backgroundColor: CONFIRMED }} />
-            <div style={{ width: `${100 - successW}%`, backgroundColor: AWAITING }} />
           </div>
 
           <dl className="mt-4 flex flex-wrap gap-x-8 gap-y-3">
@@ -375,10 +396,10 @@ function Figure({
         className="size-2.5 shrink-0 rounded-full"
         style={{ backgroundColor: color }}
       />
-      <dt className="text-sm text-gray-400">{label}</dt>
+      <dt className="text-sm text-gray-300">{label}</dt>
       <dd className="text-sm text-white">
         <span className="font-semibold tabular-nums">{nf.format(value)}</span>
-        <span className="ml-1.5 text-gray-500 tabular-nums">{percent.toFixed(1)}%</span>
+        <span className="ml-1.5 text-gray-400 tabular-nums">{percent.toFixed(1)}%</span>
       </dd>
     </div>
   );
@@ -399,10 +420,10 @@ function Card({
 }) {
   return (
     <div
-      className={`min-w-0 rounded-2xl border border-white/10 bg-black/30 p-4 backdrop-blur-md sm:p-5 ${className}`}
+      className={`min-w-0 rounded-2xl border border-hairline bg-panel-raised p-4 sm:p-5 ${className}`}
     >
       <h2 className="text-base font-semibold text-[#f8c8fc]">{title}</h2>
-      {note && <p className="mt-0.5 text-xs text-gray-500">{note}</p>}
+      {note && <p className="mt-0.5 text-xs text-gray-400">{note}</p>}
       <div className="mt-4">{children}</div>
     </div>
   );
@@ -411,6 +432,15 @@ function Card({
 /** Fixed-height, full-width box: canvases size to the card, never past it. */
 function ChartBox({ height, children }: { height: string; children: React.ReactNode }) {
   return <div className={`relative w-full ${height}`}>{children}</div>;
+}
+
+/** Empty state for charts: centered text, much shorter than chart box. */
+function EmptyState({ message }: { message: string }) {
+  return (
+    <div className="flex w-full min-h-[80px] items-center justify-center">
+      <p className="text-sm text-gray-400">{message}</p>
+    </div>
+  );
 }
 
 function Skeleton() {

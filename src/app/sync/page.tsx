@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import AdminGate, { clearStoredCreds } from '@/components/admin/AdminGate';
+import BackToAdmin from '@/components/admin/BackToAdmin';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Manual Google Sheets sync.
@@ -73,19 +74,22 @@ function SyncPanel({ creds, logout }: { creds: string; logout: () => void }) {
   const locked = status.kind === 'expired';
 
   return (
-    <main className="min-h-screen text-white px-4 py-8 sm:px-6 sm:py-10">
+    <main className="min-h-screen bg-panel text-white px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto w-full max-w-2xl">
         <header className="mb-7 flex flex-wrap items-start justify-between gap-4">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Admin Controls</h1>
-          <button
-            onClick={logout}
-            className="inline-flex min-h-11 items-center rounded-lg border border-white/10 bg-white/5 px-4 text-sm font-medium text-gray-300 transition-colors hover:border-white/20 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-soft"
-          >
-            Logout
-          </button>
+          <div className="flex items-center gap-2">
+            <BackToAdmin />
+            <button
+              onClick={logout}
+              className="inline-flex min-h-11 items-center rounded-lg border border-hairline bg-white/5 px-4 text-sm font-medium text-gray-300 transition-colors hover:border-hairline hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-soft"
+            >
+              Logout
+            </button>
+          </div>
         </header>
 
-        <section className="rounded-2xl border border-white/10 bg-black/30 p-5 backdrop-blur-md sm:p-7">
+        <section className="rounded-2xl border border-hairline bg-panel-raised p-5 sm:p-7">
           <h2 className="text-base font-semibold text-accent-soft">Google Sheets</h2>
           <p className="mt-2 max-w-prose text-sm leading-relaxed text-gray-300">
             Click the button below to sync all registrations to your connected Google Sheet.

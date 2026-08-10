@@ -1,8 +1,21 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /*
+   * Unconditional, not behind `prefers-color-scheme: dark`.
+   *
+   * The animated <Background /> used to hide the body colour on every page, so
+   * a white default went unnoticed. It no longer renders on the staff routes
+   * (/admin, /stats, /sync, /verify), and a phone in light mode would otherwise
+   * paint those pages white underneath `text-white` content. /verify is used at
+   * the venue door on whatever phone a volunteer is holding.
+   *
+   * `color-scheme` also makes native controls render dark — including the
+   * html5-qrcode camera picker that verify/page.tsx fights with !important.
+   */
+  color-scheme: dark;
+  --background: #0a0a0a;
+  --foreground: #ededed;
 }
 
 @theme inline {
@@ -26,30 +39,70 @@
  * one place the values are legitimately duplicated — change both together.
  */
 @theme {
-  /* Primary action: buttons, selected states, required markers. */
+  /* Selected states, borders, rings, required markers, small accents. */
   --color-accent: #e97bfc;
   /* Headings, focus rings, and text on the accent. Lighter, lower chroma. */
   --color-accent-soft: #f8c8fc;
-}
+  /*
+   * Filled-button background. Same hue as --color-accent, deeper.
+   *
+   * White text on #e97bfc is 2.41:1 — well under the 4.5:1 AA floor, which is
+   * why the button carried black text and read as flat. This is oklch(0.55 .24
+   * 321.6), identical hue, and white on it is 5.55:1. Buttons get this; every
+   * other accent use keeps the lighter --color-accent.
+   */
+  --color-accent-deep: #ad22c2;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /*
+   * Staff-panel surfaces: /admin, /stats, /sync, /verify.
+   *
+   * OPAQUE, unlike the public pages' translucent cards. Those sit over an
+   * animated background that is the brand; these sit over nothing, because
+   * <Background /> unmounts on staff routes. Dense forms, tables and charts
+   * cannot compete with a flickering grid and a drifting blurred ray.
+   *
+   * Scoped by USAGE, not by a cascade rule: only staff pages reference these
+   * utilities. There is deliberately no `.admin { … }` wrapper and no body
+   * rule, so nothing here can leak onto the registration form.
+   *
+   * Elevation is the lightness step plus a visible hairline. No shadow scale —
+   * a black shadow on a near-black panel does nothing.
+   */
+  --color-panel: oklch(0.18 0 0);
+  --color-panel-raised: oklch(0.222 0 0);
+  /* Brighter than panel-raised on purpose. The reference theme's border was
+   * 0.003 lighter than its own card, i.e. invisible. A border has to be seen. */
+  --color-hairline: oklch(0.32 0.006 320);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  /*
+   * Geist, which layout.tsx has been loading all along.
+   *
+   * This said `Arial, Helvetica, sans-serif`, so anything that did not also
+   * carry the `font-sans` utility rendered in Arial — which was every admin
+   * screen. The font was downloaded on every page load and then not used.
+   */
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
+    'Segoe UI', Roboto, sans-serif;
 
+  /*
+   * Chrome paints autofilled inputs a hard yellow-white that ignores ordinary
+   * background rules; an inset box-shadow is the only reliable override.
+   *
+   * The value matches `bg-white/5`, which is what every input in the product
+   * uses — including the staff panels, whose fields keep a tinted-white fill
+   * (rather than the opaque panel colour) precisely so this one rule stays
+   * correct everywhere.
+   */
   input:-webkit-autofill,
   input:-webkit-autofill:hover,
   input:-webkit-autofill:focus {
     -webkit-box-shadow: 0 0 0 30px rgba(255, 255, 255, 0.05) inset !important;
     -webkit-text-fill-color: white !important;
-    background-color: rgba(255, 255, 255, 0.05) !important;
+    caret-color: white;
     transition: background-color 5000s ease-in-out 0s;
   }
 }

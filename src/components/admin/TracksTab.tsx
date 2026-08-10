@@ -135,10 +135,10 @@ export function useTracksEditor(creds: string, active: boolean): TracksEditor {
 // The two files cannot share a module without adding a third, so they are
 // duplicated deliberately — change both or neither.
 const input =
-  'w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 ' +
+  'w-full bg-white/5 border border-hairline rounded-lg px-4 py-3 text-white placeholder-gray-500 ' +
   'outline-none transition-[border-color,background-color,box-shadow] duration-200 ' +
   'hover:border-white/30 focus:border-transparent focus:ring-2 focus:ring-accent-soft';
-const smallLabel = 'block text-[11px] font-medium uppercase tracking-wider text-gray-500 mb-1.5';
+const smallLabel = 'block text-[11px] font-medium uppercase tracking-wider text-gray-400 mb-1.5';
 
 const SEGMENTS: { id: AdminTrack['segment']; title: string; blurb: string }[] = [
   { id: 'beginner', title: 'Beginner', blurb: 'Two days. Included in a bundle, or buyable on its own.' },
@@ -278,9 +278,9 @@ function SeatBar({ track, muted }: { track: AdminTrack; muted?: boolean }) {
         <span className={`text-xl font-semibold tabular-nums leading-none ${count}`}>
           {track.sold}
         </span>
-        <span className="text-sm text-gray-500 tabular-nums">sold / {track.capacity}</span>
+        <span className="text-sm text-gray-400 tabular-nums">sold / {track.capacity}</span>
         {track.held > 0 && (
-          <span className="text-xs text-gray-500 tabular-nums">+{track.held} holding</span>
+          <span className="text-xs text-gray-400 tabular-nums">+{track.held} holding</span>
         )}
         {track.full && (
           <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-red-500/25 text-red-200 ring-1 ring-inset ring-red-400/50">
@@ -410,7 +410,7 @@ export function TracksTab({ editor }: { editor: TracksEditor }) {
         for {holdMinutes} minutes and shows as <em>holding</em>; those seats count towards FULL on
         the public form, which is why a track can read as full below its sold number.
       </p>
-      <p className="mt-3 text-xs leading-relaxed text-gray-500 max-w-[78ch]">
+      <p className="mt-3 text-xs leading-relaxed text-gray-400 max-w-[78ch]">
         Slug and segment are fixed — the checkout resolves tracks by slug. Editing dates changes what
         new tickets are issued for; tickets already sold keep the dates they were bought with. Order
         is one list across all segments, not per segment: the registration form sorts by it flat, so
@@ -434,14 +434,14 @@ export function TracksTab({ editor }: { editor: TracksEditor }) {
         const rows = tracks.filter((t) => t.segment === segment.id);
         if (rows.length === 0) return null;
         return (
-          <div key={segment.id} className="mt-8 pt-8 border-t border-white/10">
+          <div key={segment.id} className="mt-8 pt-8 border-t border-hairline">
             <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-accent-soft">
               {segment.title}
             </h2>
-            <p className="mt-1.5 text-xs leading-relaxed text-gray-500 max-w-[62ch]">
+            <p className="mt-1.5 text-xs leading-relaxed text-gray-400 max-w-[62ch]">
               {segment.blurb}
             </p>
-            <div className="mt-5 divide-y divide-white/[0.07]">
+            <div className="mt-5 divide-y divide-hairline">
               {rows.map((t) => (
                 <TrackRow key={t.id} track={t} onPatch={(p) => patch(t.id, p)} />
               ))}

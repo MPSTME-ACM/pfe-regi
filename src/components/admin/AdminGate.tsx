@@ -62,10 +62,12 @@ function LoginForm({
   const [showPassword, setShowPassword] = useState(false);
   const [capsOn, setCapsOn] = useState(false);
 
+  // Tinted-white fill rather than the opaque panel colour, so the -webkit-autofill
+  // override in globals.css (which is a single literal) stays correct here too.
   const field =
-    'w-full bg-white/[0.04] border border-white/15 rounded-lg px-3.5 py-3 text-white ' +
-    'placeholder-gray-600 outline-none transition-[border-color,background-color,box-shadow] duration-200 ' +
-    'hover:border-white/25 focus:border-accent/60 focus:bg-white/[0.07] focus:ring-2 focus:ring-accent/25';
+    'w-full bg-white/5 border border-hairline rounded-lg px-3.5 py-3 text-white ' +
+    'placeholder-gray-500 outline-none transition-[border-color,background-color,box-shadow] duration-200 ' +
+    'hover:border-hairline/80 focus:border-accent/60 focus:ring-2 focus:ring-accent/25';
 
   return (
     <div className="w-full max-w-[22rem]">
@@ -84,7 +86,7 @@ function LoginForm({
         </p>
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-black/40 backdrop-blur-md p-6 sm:p-7 shadow-2xl shadow-black/40">
+      <div className="rounded-2xl border border-hairline bg-panel-raised p-6 sm:p-7">
         <h2 className="text-lg font-semibold text-white">{title}</h2>
         <p className="mt-1 mb-6 text-sm text-gray-400">
           {role === 'admin'
@@ -154,7 +156,7 @@ function LoginForm({
           <button
             type="submit"
             disabled={busy}
-            className="mt-6 w-full rounded-lg bg-accent py-3 font-semibold text-black transition-[transform,box-shadow,opacity] duration-200 ease-out hover:shadow-lg hover:shadow-accent/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white active:scale-[0.99] disabled:opacity-50 disabled:active:scale-100"
+            className="mt-6 w-full rounded-lg bg-accent-deep py-3 font-semibold text-white transition-[transform,box-shadow,opacity] duration-200 ease-out hover:bg-accent-deep/90 hover:shadow-lg hover:shadow-accent/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-soft active:scale-[0.99] disabled:opacity-50 disabled:active:scale-100"
           >
             {busy ? 'Checking…' : 'Sign in'}
           </button>
@@ -211,18 +213,18 @@ export default function AdminGate({
   };
 
   // Avoid flashing the login form for an already-authenticated admin while
-  // sessionStorage is being read on mount.
+  // sessionStorage is being read on mount. Needs its own background: this is
+  // the very first paint on every staff route, and <Background /> does not
+  // render on them, so an unpainted <main> flashes the body colour.
   if (!ready) {
-    return <main className="min-h-screen" />;
+    return <main className="min-h-screen bg-panel" />;
   }
 
   if (!creds) {
-    // No opaque background here. `layout.tsx` renders the animated <Background />
-    // behind everything, and the old `bg-gray-900` painted straight over it —
-    // so the sign-in screen was the one surface in the product that did not look
-    // like the product.
+    // Opaque panel, not the animated brand background. Staff tools are dense
+    // and get read, not admired; <Background /> unmounts on these four routes.
     return (
-      <main className="min-h-screen text-white flex items-center justify-center px-4 py-10">
+      <main className="min-h-screen bg-panel text-white flex items-center justify-center px-4 py-10">
         <LoginForm
           title={title}
           role={role}

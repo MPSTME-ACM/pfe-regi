@@ -1,8 +1,30 @@
 "use client"
 
+import { usePathname } from "next/navigation"
 import FlickeringGrid from "@/components/flickering-grid"
 
+/**
+ * Staff tools. These render on opaque panel surfaces instead.
+ *
+ * A flickering canvas grid and a drifting blurred ray are the brand on the
+ * registration page and noise behind a form, a table or a chart. Returning null
+ * here UNMOUNTS the canvas rather than covering it, which also stops it burning
+ * CPU on the phone running /verify at the venue door.
+ */
+const STAFF_ROUTES = ["/admin", "/stats", "/sync", "/verify"]
+
+const isStaffRoute = (pathname: string) =>
+  // Boundary-matched, so a future /admin/coupons is covered but a hypothetical
+  // /verifying is not.
+  STAFF_ROUTES.some((r) => pathname === r || pathname.startsWith(`${r}/`))
+
 const Background = () => {
+  // Resolves during SSR as well as on the client, so the server HTML and the
+  // first client render agree — no hydration mismatch. The element is
+  // `fixed … -z-10`, so unmounting it shifts no layout.
+  const pathname = usePathname()
+  if (isStaffRoute(pathname)) return null
+
   return (
     <div aria-hidden className="fixed inset-0 -z-10">
       {/* Animated helpers for the diagonal ray */}
