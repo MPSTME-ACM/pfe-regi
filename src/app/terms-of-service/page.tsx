@@ -10,7 +10,7 @@ export default function TermsOfServicePage() {
         <ProgramHeader dateRange={dateRange} />
 
         <div className="text-center mt-10 mb-8">
-          <h1 className="text-4xl sm:text-5xl font-extrabold text-[#f8c8fc] mb-4 leading-tight">
+          <h1 className="text-4xl sm:text-5xl font-extrabold text-accent-soft mb-4 leading-tight">
             Terms of Service
           </h1>
         </div>
@@ -19,27 +19,27 @@ export default function TermsOfServicePage() {
           <p>Welcome to the PFE - Programming For Everyone workshop hosted by ACM MPSTME. By registering for this event, you agree to comply with and be bound by the following terms and conditions of use. Please review the following terms carefully.</p>
 
           <div>
-            <h2 className="text-2xl font-bold text-[#f8c8fc] mb-2">1. Registration and Payment</h2>
+            <h2 className="text-2xl font-bold text-accent-soft mb-2">1. Registration and Payment</h2>
             <p>All registrations must be completed via the official registration form. The ticket price of ₹100 is non-negotiable and must be paid in full to confirm your participation. All payments are processed through our secure payment gateway, Cashfree Payments.</p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-[#f8c8fc] mb-2">2. Code of Conduct</h2>
+            <h2 className="text-2xl font-bold text-accent-soft mb-2">2. Code of Conduct</h2>
             <p>All attendees are expected to conduct themselves in a professional and respectful manner. Harassment, discrimination, or any disruptive behavior will not be tolerated and may result in immediate removal from the workshop without a refund.</p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-[#f8c8fc] mb-2">3. Content and Materials</h2>
+            <h2 className="text-2xl font-bold text-accent-soft mb-2">3. Content and Materials</h2>
             <p>All workshop materials, including notes and code, are provided for personal educational use only. Redistribution or commercial use of these materials without explicit permission from ACM MPSTME is strictly prohibited.</p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-[#f8c8fc] mb-2">4. Liability</h2>
+            <h2 className="text-2xl font-bold text-accent-soft mb-2">4. Liability</h2>
             <p>ACM MPSTME is not responsible for any loss, injury, or damage to personal property. By attending, you agree to release ACM MPSTME from any and all claims and liabilities.</p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-[#f8c8fc] mb-2">5. Shipping and Delivery</h2>
+            <h2 className="text-2xl font-bold text-accent-soft mb-2">5. Shipping and Delivery</h2>
             <p>The PFE Workshop will be conducted <strong>offline</strong> at the <strong>Mukesh Patel School of Technology Management & Engineering, Mumbai campus</strong> on the <strong>16<sup>th</sup>, 17<sup>th</sup>, and 18<sup>th</sup> of September 2025</strong>. As this is an in-person event, there are <strong>no physical products</strong> being shipped. The exact classroom venue and event logistics will be communicated through a dedicated WhatsApp group, which will be created by <strong>13<sup>th</sup> September 2025</strong>. There are no shipping or delivery charges applicable.</p>
           </div>
         </div>

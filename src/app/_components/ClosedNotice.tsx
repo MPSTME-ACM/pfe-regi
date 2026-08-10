@@ -27,7 +27,7 @@ export default function ClosedNotice({
         <ProgramHeader dateRange={eventConfig.dateRange} />
 
         <div className="text-center mt-10 mb-8">
-          <h1 className="text-4xl sm:text-5xl font-extrabold text-[#f8c8fc] mb-4 leading-tight">
+          <h1 className="text-4xl sm:text-5xl font-extrabold text-accent-soft mb-4 leading-tight">
             {title}
           </h1>
           {/* Author-entered copy. Rendered as text, never as HTML. */}
@@ -42,7 +42,7 @@ export default function ClosedNotice({
                 key={contact.phone}
                 className="bg-white/5 border border-white/20 p-6 rounded-lg text-left w-full sm:w-1/2 max-w-sm mx-auto"
               >
-                <h3 className="text-lg font-semibold text-[#e97bfc] mb-2">{contact.name}</h3>
+                <h3 className="text-lg font-semibold text-accent mb-2">{contact.name}</h3>
                 <p className="text-gray-300">
                   <span className="font-medium">Phone:</span>{' '}
                   <Link href={`tel:+91${contact.phone}`} className="hover:text-white transition-colors">

@@ -1,4 +1,4 @@
-import { pgTable, serial, text, varchar, timestamp, index, jsonb, pgEnum, boolean, integer, check } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, varchar, timestamp, index, uniqueIndex, jsonb, pgEnum, boolean, integer, check } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -71,8 +71,12 @@ export const registrations = pgTable('pferegistration', {
   amountPaid: integer('amount_paid').notNull().default(0),
 
   // -- phase 3 (coupons + referral attribution) -------------------------------
-  couponId: integer('coupon_id'),
-  referrerId: integer('referrer_id'),
+  /** The coupon applied, if any. The FK is deliberate: it makes deleting a
+   *  redeemed coupon impossible, which is correct — disable it instead, or the
+   *  discount on a paid order becomes unexplainable after the fact. */
+  couponId: integer('coupon_id').references(() => coupons.id),
+  /** Attribution only. A referrer never changes the price. */
+  referrerId: integer('referrer_id').references(() => referrers.id),
   referral: text('referral'),
 
   // -- payment ----------------------------------------------------------------
@@ -124,6 +128,92 @@ export const registrations2025 = pgTable('pferegistration_2025', {
 });
 
 export type Registration2025 = typeof registrations2025.$inferSelect;
+
+// ─── coupons ─────────────────────────────────────────────────────────────────
+// Column-for-column the `Coupon` interface in lib/pricing/resolvePrice.ts, so a
+// row can be handed to resolvePrice() with no mapping layer to drift out of sync.
+//
+// ACM's 50%-off member codes are not a separate mechanism: they are rows here
+// with type='percent', value=50, maxUses=1. One engine, one redemption log.
+
+export const couponTypeEnum = pgEnum('coupon_type_enum', ['percent', 'flat', 'fixed', 'free']);
+
+export const coupons = pgTable('coupons', {
+  id: serial('id').primaryKey(),
+  /** Always stored UPPERCASE and trimmed — see normaliseCode(). */
+  code: varchar('code', { length: 40 }).notNull().unique(),
+  type: couponTypeEnum('type').notNull(),
+  /** percent: 0..100 · flat: paise off · fixed: resulting paise · free: ignored. */
+  value: integer('value').notNull().default(0),
+  /** Which SKUs it applies to. Empty array means all of them. */
+  appliesTo: jsonb('applies_to').$type<string[]>().notNull().default([]),
+  /** Minimum order value in paise, before discount. */
+  minAmount: integer('min_amount'),
+  /** Total redemptions across everyone. Null = unlimited. */
+  maxUses: integer('max_uses'),
+  /** Redemptions per person, keyed on email+contact. Null = unlimited. */
+  maxPerPerson: integer('max_per_person'),
+  validFrom: timestamp('valid_from', { withTimezone: true }),
+  validUntil: timestamp('valid_until', { withTimezone: true }),
+  enabled: boolean('enabled').notNull().default(true),
+  /** Groups one bulk generation so the panel can list and export it as a batch. */
+  batchId: varchar('batch_id', { length: 64 }),
+  /** Free text for the committee: what this code is for, who it went to. */
+  note: text('note'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  batchIdx: index('coupons_batch_idx').on(table.batchId),
+}));
+
+export type CouponRow = typeof coupons.$inferSelect;
+
+export const redemptionStateEnum = pgEnum('redemption_state_enum', [
+  'reserved', 'burned', 'released',
+]);
+
+/**
+ * One row per (coupon, order) attempt.
+ *
+ * The lifecycle is reserve → burn on payment, or release on failure. A user who
+ * closes the Cashfree modal produces NO webhook at all, so `reservedUntil` is
+ * what stops a single-use code being locked forever by an abandoned checkout.
+ */
+export const couponRedemptions = pgTable('coupon_redemptions', {
+  id: serial('id').primaryKey(),
+  couponId: integer('coupon_id').notNull().references(() => coupons.id),
+  /** The registration's orderId. Not an FK: the row is written in the same
+   *  transaction as the registration, so the target may not be visible yet. */
+  orderId: varchar('order_id', { length: 256 }).notNull(),
+  email: varchar('email', { length: 256 }).notNull(),
+  contact: varchar('contact', { length: 20 }).notNull(),
+  /** Paise actually discounted, recorded at reserve time for reporting. */
+  amountOff: integer('amount_off').notNull().default(0),
+  state: redemptionStateEnum('state').notNull().default('reserved'),
+  /** After this, a `reserved` row no longer holds the seat. */
+  reservedUntil: timestamp('reserved_until', { withTimezone: true }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  // The webhook is idempotent by design and Cashfree retries; without this a
+  // retry could burn the same coupon twice for one order.
+  onePerOrder: uniqueIndex('coupon_redemption_order_unique').on(table.couponId, table.orderId),
+  stateIdx: index('coupon_redemption_state_idx').on(table.couponId, table.state),
+}));
+
+export type CouponRedemption = typeof couponRedemptions.$inferSelect;
+
+// ─── referrers ───────────────────────────────────────────────────────────────
+// Attribution only, by decision: a referrer code credits a committee member on
+// the leaderboard and carries NO discount. Discounts are coupons.
+
+export const referrers = pgTable('referrers', {
+  id: serial('id').primaryKey(),
+  code: varchar('code', { length: 40 }).notNull().unique(),
+  name: varchar('name', { length: 120 }).notNull(),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export type Referrer = typeof referrers.$inferSelect;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // settings — a single row (id = 1) holding everything the admin panel can change

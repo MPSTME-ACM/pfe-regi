@@ -12,6 +12,26 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/*
+ * Brand tokens.
+ *
+ * These two colours were hardcoded in 117 places across 23 files, so changing
+ * the brand meant a find-and-replace and hoping. Declared here they generate the
+ * full utility set — bg-accent, text-accent, border-accent, ring-accent,
+ * outline-accent, shadow-accent — and alpha modifiers work as normal
+ * (bg-accent/10, ring-accent/25).
+ *
+ * NOT usable in src/lib/mail/*: email clients do not resolve CSS custom
+ * properties, so the confirmation template keeps its literal hex. Those are the
+ * one place the values are legitimately duplicated — change both together.
+ */
+@theme {
+  /* Primary action: buttons, selected states, required markers. */
+  --color-accent: #e97bfc;
+  /* Headings, focus rings, and text on the accent. Lighter, lower chroma. */
+  --color-accent-soft: #f8c8fc;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;

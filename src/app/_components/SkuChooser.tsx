@@ -54,7 +54,7 @@ export default function SkuChooser({
   return (
     <fieldset className="mb-8">
       <legend className="mb-3 block text-sm font-medium text-gray-300">
-        What are you registering for? <span className="text-[#e97bfc]">*</span>
+        What are you registering for? <span className="text-accent">*</span>
       </legend>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {SKUS.map((sku) => {

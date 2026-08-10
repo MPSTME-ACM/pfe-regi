@@ -2,10 +2,11 @@
 import { NextResponse } from 'next/server';
 import { Cashfree, CFEnvironment } from 'cashfree-pg';
 import { db } from '@/lib/db';
-import { registrations, tracks } from '@/lib/db/schema';
-import { inArray } from 'drizzle-orm';
+import { registrations, tracks, coupons } from '@/lib/db/schema';
+import { eq, inArray } from 'drizzle-orm';
 import { getSettings, paiseToRupees } from '@/lib/settings';
-import { resolvePrice, type Sku } from '@/lib/pricing/resolvePrice';
+import { resolvePrice, REJECTION_MESSAGES, type Sku } from '@/lib/pricing/resolvePrice';
+import { findCoupon, findReferrerId, couponUsage, reserveCoupon } from '@/lib/registration/coupons';
 import { generateOrderId } from '@/lib/registration/orderId';
 import {
   CAPSTONE_SLUG,
@@ -34,7 +35,10 @@ interface Body {
   /** Track slugs, not ids — ids are an implementation detail the form should not carry. */
   beginnerTrack?: string | null;
   advancedTrack?: string | null;
+  /** Free-text attribution, kept alongside the resolved referrerId. */
   referral?: string | null;
+  /** One code per order. There is no stacking, by decision. */
+  couponCode?: string | null;
 }
 
 function bad(message: string, error: string, status = 400) {
@@ -74,18 +78,24 @@ export async function POST(request: Request) {
     const selection = resolveSelection(body.sku!, body.beginnerTrack, body.advancedTrack, bySlug);
     if (typeof selection === 'string') return bad(selection, 'INVALID_SELECTION');
 
-    // Price is computed here and nowhere else. The browser sent no amount and
-    // could not have; whatever it displayed is cosmetic.
-    const price = resolvePrice({
-      sku: selection.sku,
-      prices: {
-        capstone: settings.priceCapstone,
-        single: settings.priceSingle,
-        bundle: settings.priceBundle,
-      },
-      coupon: null, // phase 3
-      now: new Date(),
-    });
+    // Resolve the code before opening the transaction so an unknown one fails
+    // fast, without holding row locks while we tell the user they typed it wrong.
+    const rawCode = body.couponCode?.trim() || '';
+    const coupon = rawCode ? await findCoupon(db, rawCode) : null;
+    if (rawCode && !coupon) {
+      return bad('That code is not valid.', 'COUPON_INVALID');
+    }
+
+    // Attribution only, and deliberately forgiving: an unknown or inactive
+    // referrer code is ignored rather than rejected. A typo in an optional field
+    // must never stop someone registering.
+    const referrerId = await findReferrerId(body.referral);
+
+    const prices = {
+      capstone: settings.priceCapstone,
+      single: settings.priceSingle,
+      bundle: settings.priceBundle,
+    };
 
     const orderId = generateOrderId();
     const reserve = tracksToReserve(selection);
@@ -112,9 +122,37 @@ export async function POST(request: Request) {
 
       for (const t of reserve) {
         const current = lockedById.get(t.id);
-        if (!current || !current.enabled) return { full: t.name } as const;
+        if (!current || !current.enabled) return { kind: 'full', name: t.name } as const;
         const used = t.slug === CAPSTONE_SLUG ? capstoneSold : (sold.get(t.id) ?? 0);
-        if (used >= current.capacity) return { full: current.name } as const;
+        if (used >= current.capacity) return { kind: 'full', name: current.name } as const;
+      }
+
+      // Lock the coupon row before counting its uses. Without this, two people
+      // redeeming the same single-use code at once both read zero uses, both
+      // pass, and both pay a discounted price. The track locks above do not
+      // help — they may be buying different tracks entirely.
+      let usage = { total: 0, byPerson: 0 };
+      if (coupon) {
+        await tx.select({ id: coupons.id }).from(coupons).where(eq(coupons.id, coupon.id)).for('update');
+        usage = await couponUsage(tx, coupon.id, body.email!.trim(), body.contact!.trim());
+      }
+
+      // The ONLY place an amount is decided. The browser sent none and could
+      // not have; whatever it displayed is cosmetic.
+      const price = resolvePrice({
+        sku: selection.sku,
+        prices,
+        coupon,
+        couponUses: usage.total,
+        couponUsesByPerson: usage.byPerson,
+        now: new Date(),
+      });
+
+      // A code that exists but cannot be used here is an error, not a silent
+      // downgrade to full price: someone who typed a code expects it to apply,
+      // and quietly charging them more is how you get a chargeback.
+      if (coupon && !price.couponApplied) {
+        return { kind: 'coupon_rejected', rejection: price.rejection } as const;
       }
 
       await tx.insert(registrations).values({
@@ -134,18 +172,40 @@ export async function POST(request: Request) {
         orderId,
         paymentStatus: 'pending',
         referral: body.referral?.trim() || null,
+        couponId: coupon?.id ?? null,
+        referrerId,
       });
 
-      return { full: null } as const;
+      if (coupon) {
+        await reserveCoupon(tx, {
+          couponId: coupon.id,
+          orderId,
+          email: body.email!.trim(),
+          contact: body.contact!.trim(),
+          amountOff: price.discount,
+        });
+      }
+
+      return { kind: 'ok', amount: price.amount } as const;
     });
 
-    if (outcome.full) {
-      return bad(`${outcome.full} is now full. Please choose another option.`, 'TRACK_FULL');
+    if (outcome.kind === 'full') {
+      return bad(`${outcome.name} is now full. Please choose another option.`, 'TRACK_FULL');
     }
 
-    // A 100%-off coupon (phase 3) produces a zero order. Cashfree cannot take
-    // one, so it must never reach the gateway — complete it directly instead.
-    if (price.amount === 0) {
+    if (outcome.kind === 'coupon_rejected') {
+      const reason = outcome.rejection
+        ? REJECTION_MESSAGES[outcome.rejection]
+        : 'That code cannot be used for this order.';
+      return bad(reason, 'COUPON_REJECTED');
+    }
+
+    const amountPaid = outcome.amount;
+
+    // A 100%-off coupon produces a zero order, and Cashfree cannot take one, so
+    // it must never reach the gateway. completeWithoutPayment marks the row
+    // 'comped', issues the QR and sends the ticket.
+    if (amountPaid === 0) {
       await completeWithoutPayment(orderId);
       return NextResponse.json({ success: true, order_id: orderId, free: true });
     }
@@ -153,7 +213,7 @@ export async function POST(request: Request) {
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
     const order = await cashfree.PGCreateOrder({
       order_id: orderId,
-      order_amount: paiseToRupees(price.amount),
+      order_amount: paiseToRupees(amountPaid),
       order_currency: 'INR',
       customer_details: {
         customer_id: `customer_${body.contact}`,

@@ -46,18 +46,18 @@ export default function OptionCard({
   const state = disabled
     ? 'cursor-not-allowed border-white/10 bg-white/[0.02]'
     : checked
-      ? 'cursor-pointer border-[#e97bfc] bg-[#e97bfc]/10 ring-1 ring-[#e97bfc]'
+      ? 'cursor-pointer border-accent bg-accent/10 ring-1 ring-accent'
       : badge && badgeTone === 'suggested'
         // A suggestion is a nudge, not a selection: enough tint to draw the eye,
         // never enough to be mistaken for already-chosen.
-        ? 'cursor-pointer border-[#f8c8fc]/40 bg-[#f8c8fc]/[0.06] hover:border-[#f8c8fc]/70 hover:bg-[#f8c8fc]/10'
+        ? 'cursor-pointer border-accent-soft/40 bg-accent-soft/[0.06] hover:border-accent-soft/70 hover:bg-accent-soft/10'
         : 'cursor-pointer border-white/20 bg-white/5 hover:border-white/40 hover:bg-white/10';
 
   return (
     <label
       className={[
         'relative flex flex-col rounded-xl border p-4 transition-colors duration-200',
-        'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[#f8c8fc]',
+        'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent-soft',
         state,
       ].join(' ')}
     >
@@ -72,7 +72,7 @@ export default function OptionCard({
         className="absolute inset-0 h-full w-full cursor-[inherit] appearance-none rounded-xl opacity-0 focus:outline-none"
       />
       <span className="flex items-baseline justify-between gap-2">
-        <span className={`font-semibold ${disabled ? 'text-gray-500' : 'text-[#f8c8fc]'}`}>
+        <span className={`font-semibold ${disabled ? 'text-gray-500' : 'text-accent-soft'}`}>
           {title}
         </span>
         {trailing && (
@@ -94,8 +94,8 @@ export default function OptionCard({
           className={[
             'mt-3 self-start rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase',
             badgeTone === 'suggested'
-              ? 'bg-[#f8c8fc]/15 text-[#f8c8fc]'
-              : 'bg-[#e97bfc]/20 text-[#f8c8fc]',
+              ? 'bg-accent-soft/15 text-accent-soft'
+              : 'bg-accent/20 text-accent-soft',
           ].join(' ')}
         >
           {badge}

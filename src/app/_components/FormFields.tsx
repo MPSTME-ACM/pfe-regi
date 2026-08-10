@@ -26,7 +26,7 @@ export const InputField: React.FC<InputFieldProps> = ({
 }) => (
   <div className="mb-6">
     <label htmlFor={name} className="block text-sm font-medium text-gray-300 mb-2">
-      {label} {required && <span className="text-[#e97bfc]">*</span>}
+      {label} {required && <span className="text-accent">*</span>}
     </label>
     <input
       type={type}
@@ -38,7 +38,7 @@ export const InputField: React.FC<InputFieldProps> = ({
       required={required}
       aria-invalid={error ? true : undefined}
       aria-describedby={error ? `${name}-error` : hint ? `${name}-hint` : undefined}
-      className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#f8c8fc] transition-all duration-300 autofill:!bg-white/5"
+      className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-accent-soft transition-all duration-300 autofill:!bg-white/5"
     />
     {hint && !error && <p id={`${name}-hint`} className="mt-1 text-xs text-gray-500">{hint}</p>}
     {error && <p id={`${name}-error`} className="text-red-500 text-xs mt-1">{error}</p>}
@@ -99,7 +99,7 @@ export const SelectField: React.FC<SelectFieldProps> = ({
   return (
     <div className="mb-6">
       <label htmlFor={name} className="block text-sm font-medium text-gray-300 mb-2">
-        {label} {required && <span className="text-[#e97bfc]">*</span>}
+        {label} {required && <span className="text-accent">*</span>}
       </label>
       <select
         id={name}
@@ -108,7 +108,7 @@ export const SelectField: React.FC<SelectFieldProps> = ({
         onChange={onChange}
         required={required}
         aria-describedby={hint ? `${name}-hint` : undefined}
-        className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#f8c8fc] appearance-none"
+        className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-accent-soft appearance-none"
         style={{
           backgroundImage: CHEVRON,
           backgroundPosition: 'right 0.5rem center',

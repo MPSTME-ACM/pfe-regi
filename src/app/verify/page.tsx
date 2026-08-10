@@ -44,8 +44,8 @@ const CARD = "w-full bg-black/30 backdrop-blur-md rounded-2xl border border-whit
 
 /** Full-width primary. One per screen, and always the thing to do next. */
 const PRIMARY =
-  "w-full min-h-14 rounded-xl bg-[#e97bfc] px-5 text-lg font-bold text-black " +
-  "transition-[transform,box-shadow] duration-200 ease-out hover:shadow-lg hover:shadow-[#e97bfc]/30 " +
+  "w-full min-h-14 rounded-xl bg-accent px-5 text-lg font-bold text-black " +
+  "transition-[transform,box-shadow] duration-200 ease-out hover:shadow-lg hover:shadow-accent/30 " +
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white active:scale-[0.99] " +
   // Inert rather than a dimmed accent: a 40%-opacity purple slab still read as
   // the loudest control on the screen, next to the button you actually want.
@@ -54,7 +54,7 @@ const PRIMARY =
 const SECONDARY =
   "w-full min-h-14 rounded-xl border border-white/20 bg-white/5 px-5 text-lg font-semibold text-white " +
   "transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 " +
-  "focus-visible:outline-[#f8c8fc] active:bg-white/15"
+  "focus-visible:outline-accent-soft active:bg-white/15"
 
 // --- Icons -------------------------------------------------------------------
 // The verdict is never carried by colour alone: each one pairs its hue with a
@@ -127,7 +127,7 @@ const QrScanner = ({
 
   return (
     <div className={`${CARD} p-4 sm:p-6`}>
-      <h2 className="text-lg font-semibold text-[#f8c8fc] mb-1 text-center">Scan ticket</h2>
+      <h2 className="text-lg font-semibold text-accent-soft mb-1 text-center">Scan ticket</h2>
       <p className="text-center text-gray-400 text-sm mb-4">Align the QR inside the square.</p>
       <div
         id="reader"
@@ -340,7 +340,7 @@ const TicketPanel = ({
   if (loading) {
     return (
       <div className={`${CARD} p-10 flex flex-col items-center gap-4`}>
-        <span className="block h-10 w-10 rounded-full border-[3px] border-white/15 border-t-[#e97bfc] animate-spin [animation-duration:0.9s] motion-reduce:animate-none" />
+        <span className="block h-10 w-10 rounded-full border-[3px] border-white/15 border-t-accent animate-spin [animation-duration:0.9s] motion-reduce:animate-none" />
         <p className="text-gray-400">Looking up ticket…</p>
       </div>
     )
@@ -374,7 +374,7 @@ const TicketPanel = ({
 
       <div>
         <p className="text-2xl font-bold text-white leading-tight break-words">{ticket.name}</p>
-        <p className="mt-1.5 font-medium text-[#f8c8fc]">{ticket.description}</p>
+        <p className="mt-1.5 font-medium text-accent-soft">{ticket.description}</p>
         <p className="mt-1.5 text-sm text-gray-400">
           {[ticket.year, ticket.course, ticket.department].filter(Boolean).join(" · ") || "—"}
         </p>
@@ -407,7 +407,7 @@ const TicketPanel = ({
           {days.map((day) => (
             <label
               key={day.key}
-              className={`flex items-center gap-4 min-h-[4.5rem] px-4 rounded-xl border transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[#f8c8fc] ${
+              className={`flex items-center gap-4 min-h-[4.5rem] px-4 rounded-xl border transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent-soft ${
                 ticket.readOnly
                   ? "border-white/10 bg-white/[0.03] cursor-not-allowed"
                   : day.present
@@ -543,14 +543,14 @@ const VerifyScreen = ({ creds, logout }: { creds: string; logout: () => void }) 
     <main className="min-h-screen text-white px-4 py-4 font-sans">
       <div className="w-full max-w-md mx-auto">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-bold text-[#f8c8fc]">PFE Door Check</h1>
+          <h1 className="text-xl font-bold text-accent-soft">PFE Door Check</h1>
           <button
             onClick={() => {
               window.history.pushState({}, "", "/verify")
               setOrderId(null)
               logout()
             }}
-            className="min-h-11 px-4 text-sm text-gray-300 hover:text-white bg-black/30 rounded-lg border border-white/10 focus:outline-none focus:ring-2 focus:ring-[#f8c8fc]/60 transition"
+            className="min-h-11 px-4 text-sm text-gray-300 hover:text-white bg-black/30 rounded-lg border border-white/10 focus:outline-none focus:ring-2 focus:ring-accent-soft/60 transition"
           >
             Log out
           </button>
@@ -572,7 +572,7 @@ const VerifyScreen = ({ creds, logout }: { creds: string; logout: () => void }) 
         ) : (
           <div className={`${CARD} p-6 sm:p-8 text-center`}>
             <span
-              className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-[#e97bfc]/35 bg-[#e97bfc]/10 text-[#e97bfc]"
+              className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-accent/35 bg-accent/10 text-accent"
               aria-hidden="true"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-8 w-8">

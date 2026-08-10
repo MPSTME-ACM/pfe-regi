@@ -36,7 +36,7 @@ export default function PolicyLinks({ note }: { note: string }) {
             )}
             <Link
               href={href}
-              className="inline-flex min-h-11 items-center rounded-sm px-1 whitespace-nowrap transition-colors hover:text-[#f8c8fc] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f8c8fc] sm:min-h-0"
+              className="inline-flex min-h-11 items-center rounded-sm px-1 whitespace-nowrap transition-colors hover:text-accent-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-soft sm:min-h-0"
             >
               {label}
             </Link>

@@ -5,6 +5,7 @@ import { registrations } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import qrcode from 'qrcode';
 import { sendTicketEmail } from '@/lib/registration/completeWithoutPayment';
+import { burnRedemption, releaseRedemption } from '@/lib/registration/coupons';
 import 'dotenv/config';
 
 export const config = { api: { bodyParser: false } };
@@ -84,6 +85,11 @@ export async function POST(request: Request) {
         .set({ paymentStatus: 'success', qrCodeUrl })
         .where(eq(registrations.orderId, orderId));
 
+      // Settle the coupon hold. Safe to call unconditionally: it only ever moves
+      // a `reserved` row for THIS order, so an order without a coupon is a no-op
+      // and a retried webhook cannot burn a second use.
+      await burnRedemption(orderId);
+
       // Awaited but never throwing: the payment is already recorded, so an SMTP
       // failure must not become a 500 that makes Cashfree retry a completed
       // order. It leaves emailSentAt null for the admin panel to pick up.
@@ -99,6 +105,10 @@ export async function POST(request: Request) {
           .update(registrations)
           .set({ paymentStatus: 'failure' })
           .where(eq(registrations.orderId, orderId));
+        // Hand the coupon use back immediately rather than waiting for the
+        // reservation to lapse. Guarded by the same `pending` check, so a late
+        // FAILED after a real payment cannot un-burn a legitimate redemption.
+        await releaseRedemption(orderId);
       }
     }
 

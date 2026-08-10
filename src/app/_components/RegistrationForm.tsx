@@ -465,7 +465,7 @@ export default function RegistrationForm({
                       block on mobile. */}
                   <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-balance text-gray-500">
                     You will be securely redirected to our payment partner to complete your payment to{' '}
-                    <Link href={`mailto:${merchantEmail}`} className="group relative inline-block rounded-sm font-medium text-gray-400 transition-colors hover:text-[#e97bfc] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f8c8fc]">
+                    <Link href={`mailto:${merchantEmail}`} className="group relative inline-block rounded-sm font-medium text-gray-400 transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-soft">
                       {merchantName}
                       {/* max-w keeps a long merchant email from pushing the
                           page sideways on a narrow viewport. */}
@@ -478,7 +478,7 @@ export default function RegistrationForm({
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="mx-auto mt-6 w-full max-w-xs transform rounded-lg bg-[#e97bfc] px-6 py-3 text-lg font-bold text-white transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-2xl hover:shadow-[#e97bfc]/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="mx-auto mt-6 w-full max-w-xs transform rounded-lg bg-accent px-6 py-3 text-lg font-bold text-white transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-2xl hover:shadow-accent/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isLoading ? 'Processing...' : 'Proceed to Pay'}
                   </button>

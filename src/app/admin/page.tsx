@@ -41,14 +41,14 @@ const TABS: { id: TabId; label: string; phase?: string }[] = [
 const input =
   'w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 ' +
   'outline-none transition-[border-color,background-color,box-shadow] duration-200 ' +
-  'hover:border-white/30 focus:border-transparent focus:ring-2 focus:ring-[#f8c8fc]';
+  'hover:border-white/30 focus:border-transparent focus:ring-2 focus:ring-accent-soft';
 const label = 'block text-xs font-medium uppercase tracking-wider text-gray-400 mb-1.5';
 
 /** Header link-buttons. Sized for a thumb, not a mouse. */
 const chip =
   'inline-flex items-center justify-center min-h-[44px] px-3.5 rounded-lg text-sm text-gray-300 ' +
   'bg-white/[0.04] border border-white/10 transition-colors hover:bg-white/10 hover:text-white ' +
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f8c8fc]';
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-soft';
 
 function Field({
   children,
@@ -70,7 +70,7 @@ function Field({
       {badge ? (
         <span className={`${label} flex items-center gap-2`}>
           {text}
-          <span className="rounded border border-[#e97bfc]/30 bg-[#e97bfc]/15 px-1.5 py-0.5 text-[10px] font-semibold tracking-wider text-[#f8c8fc]">
+          <span className="rounded border border-accent/30 bg-accent/15 px-1.5 py-0.5 text-[10px] font-semibold tracking-wider text-accent-soft">
             {badge}
           </span>
         </span>
@@ -275,7 +275,7 @@ function Panel({ creds, logout }: { creds: string; logout: () => void }) {
       <div className="mx-auto max-w-4xl px-5 pt-8 sm:px-8 sm:pt-12">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <h1 className="text-3xl font-bold tracking-tight text-[#f8c8fc] sm:text-4xl">PFE Admin</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-accent-soft sm:text-4xl">PFE Admin</h1>
             <p className="mt-1.5 text-sm text-gray-400">
               Changes apply immediately on save. No deploy required.
             </p>
@@ -328,7 +328,7 @@ function Panel({ creds, logout }: { creds: string; logout: () => void }) {
             disabled={toggling}
             className={`min-h-[44px] w-full shrink-0 rounded-lg px-5 font-bold transition-[background-color,border-color,box-shadow,transform,opacity] duration-200 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white active:scale-[0.99] disabled:opacity-50 disabled:active:scale-100 sm:w-auto ${draft.registrationOpen
               ? 'border border-red-400/40 bg-red-500/15 text-red-200 hover:border-red-400/60 hover:bg-red-500/25'
-              : 'bg-[#e97bfc] text-black hover:shadow-lg hover:shadow-[#e97bfc]/30'
+              : 'bg-accent text-black hover:shadow-lg hover:shadow-accent/30'
               }`}
           >
             {toggling
@@ -348,8 +348,8 @@ function Panel({ creds, logout }: { creds: string; logout: () => void }) {
                 key={t.id}
                 onClick={() => setTab(t.id)}
                 aria-current={tab === t.id ? 'page' : undefined}
-                className={`inline-flex min-h-[44px] items-center gap-2 whitespace-nowrap rounded-lg px-3.5 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f8c8fc] ${tab === t.id
-                  ? 'bg-[#e97bfc]/15 font-semibold text-[#f8c8fc] shadow-[inset_0_0_0_1px_rgba(233,123,252,0.3)]'
+                className={`inline-flex min-h-[44px] items-center gap-2 whitespace-nowrap rounded-lg px-3.5 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-soft ${tab === t.id
+                  ? 'bg-accent/15 font-semibold text-accent-soft shadow-[inset_0_0_0_1px_rgba(233,123,252,0.3)]'
                   : 'text-gray-400 hover:bg-white/[0.06] hover:text-white'
                   }`}
               >
@@ -406,7 +406,7 @@ function Panel({ creds, logout }: { creds: string; logout: () => void }) {
                 {/* Bundle is the headline SKU — two tracks plus the capstone day.
                     Tinted rather than boxed-out: enough to catch the eye scanning
                     the column, quiet enough that the status banner still wins. */}
-                <div className="mb-5 rounded-xl border border-[#e97bfc]/25 bg-[#e97bfc]/[0.06] p-4 [&>div]:mb-0">
+                <div className="mb-5 rounded-xl border border-accent/25 bg-accent/[0.06] p-4 [&>div]:mb-0">
                   <Field
                     text="Bundle"
                     badge="Best value"
@@ -520,14 +520,14 @@ function Panel({ creds, logout }: { creds: string; logout: () => void }) {
           <button
             onClick={barSave}
             disabled={!barDirty || barStatus.kind === 'saving'}
-            className="inline-flex min-h-[44px] items-center justify-center rounded-lg bg-[#e97bfc] px-5 font-bold text-black transition-[box-shadow,transform,opacity] duration-200 ease-out hover:shadow-lg hover:shadow-[#e97bfc]/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white active:scale-[0.99] disabled:opacity-40 disabled:hover:shadow-none disabled:active:scale-100"
+            className="inline-flex min-h-[44px] items-center justify-center rounded-lg bg-accent px-5 font-bold text-black transition-[box-shadow,transform,opacity] duration-200 ease-out hover:shadow-lg hover:shadow-accent/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white active:scale-[0.99] disabled:opacity-40 disabled:hover:shadow-none disabled:active:scale-100"
           >
             {barStatus.kind === 'saving' ? 'Saving…' : onTracks ? 'Save tracks' : 'Save changes'}
           </button>
           {barDirty && (
             <button
               onClick={barDiscard}
-              className="inline-flex min-h-[44px] items-center justify-center rounded-lg px-3 text-sm text-gray-400 transition-colors hover:bg-white/[0.06] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f8c8fc]"
+              className="inline-flex min-h-[44px] items-center justify-center rounded-lg px-3 text-sm text-gray-400 transition-colors hover:bg-white/[0.06] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-soft"
             >
               Discard
             </button>

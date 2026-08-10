@@ -39,7 +39,7 @@ function segmentDates(list: TrackOption[]): string[] {
 function Legend({ children, hint }: { children: React.ReactNode; hint?: string }) {
   return (
     <legend className="mb-3 block text-sm font-medium text-gray-300">
-      {children} <span className="text-[#e97bfc]">*</span>
+      {children} <span className="text-accent">*</span>
       {hint && <span className="mt-0.5 block text-xs font-normal text-gray-500">{hint}</span>}
     </legend>
   );
@@ -182,7 +182,7 @@ export default function TrackFields({
         />
         {suggestion && advancedTrack !== suggestion.slug && (
           <p className="mt-3 text-xs text-gray-400">
-            <span className="text-[#f8c8fc]">{suggestion.name}</span> follows on naturally from{' '}
+            <span className="text-accent-soft">{suggestion.name}</span> follows on naturally from{' '}
             {beginners.find((t) => t.slug === beginnerTrack)?.name}. Any pairing is allowed.
           </p>
         )}

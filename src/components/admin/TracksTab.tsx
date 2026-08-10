@@ -137,7 +137,7 @@ export function useTracksEditor(creds: string, active: boolean): TracksEditor {
 const input =
   'w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 ' +
   'outline-none transition-[border-color,background-color,box-shadow] duration-200 ' +
-  'hover:border-white/30 focus:border-transparent focus:ring-2 focus:ring-[#f8c8fc]';
+  'hover:border-white/30 focus:border-transparent focus:ring-2 focus:ring-accent-soft';
 const smallLabel = 'block text-[11px] font-medium uppercase tracking-wider text-gray-500 mb-1.5';
 
 const SEGMENTS: { id: AdminTrack['segment']; title: string; blurb: string }[] = [
@@ -258,14 +258,14 @@ function SeatBar({ track, muted }: { track: AdminTrack; muted?: boolean }) {
       ? 'bg-red-400'
       : nearlyOut
         ? 'bg-amber-400'
-        : 'bg-[#e97bfc]';
+        : 'bg-accent';
   const held = muted
     ? 'bg-white/10'
     : over || atCapacity
       ? 'bg-red-400/30'
       : nearlyOut
         ? 'bg-amber-400/30'
-        : 'bg-[#e97bfc]/30';
+        : 'bg-accent/30';
   const count = muted
     ? 'text-gray-400'
     : over || atCapacity
@@ -342,7 +342,7 @@ function TrackRow({
         <button
           type="button"
           onClick={() => onPatch({ enabled: !track.enabled })}
-          className={`shrink-0 min-h-[44px] px-3.5 text-xs font-bold rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f8c8fc] ${
+          className={`shrink-0 min-h-[44px] px-3.5 text-xs font-bold rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-soft ${
             track.enabled
               ? 'bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-400/40 hover:bg-emerald-500/25'
               : 'bg-white/[0.04] text-gray-500 ring-1 ring-inset ring-white/15 hover:bg-white/10 hover:text-gray-300'
@@ -435,7 +435,7 @@ export function TracksTab({ editor }: { editor: TracksEditor }) {
         if (rows.length === 0) return null;
         return (
           <div key={segment.id} className="mt-8 pt-8 border-t border-white/10">
-            <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-[#f8c8fc]">
+            <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-accent-soft">
               {segment.title}
             </h2>
             <p className="mt-1.5 text-xs leading-relaxed text-gray-500 max-w-[62ch]">

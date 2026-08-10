@@ -19,7 +19,7 @@ export default function ProgramHeader({ dateRange }: { dateRange: string }) {
       </div>
       <p className="text-xl text-balance text-gray-300">
         A technical learning program by{' '}
-        <span className="font-semibold whitespace-nowrap text-[#f8c8fc]">ACM MPSTME</span>
+        <span className="font-semibold whitespace-nowrap text-accent-soft">ACM MPSTME</span>
       </p>
       <p className="mt-2 text-base text-gray-500">{dateRange}</p>
     </header>

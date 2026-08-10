@@ -66,7 +66,7 @@ const CrossIcon = () => (
 
 const Spinner = () => (
     <span
-        className="block h-8 w-8 rounded-full border-[3px] border-white/15 border-t-[#e97bfc] animate-spin [animation-duration:0.9s] motion-reduce:animate-none"
+        className="block h-8 w-8 rounded-full border-[3px] border-white/15 border-t-accent animate-spin [animation-duration:0.9s] motion-reduce:animate-none"
         aria-hidden="true"
     />
 );
@@ -91,7 +91,7 @@ const PageMark = () => (
 type Tone = "working" | "paid" | "pending" | "failed";
 
 const TONE: Record<Tone, { ring: string; text: string; heading: string }> = {
-    working: { ring: "border-[#e97bfc]/35 bg-[#e97bfc]/10", text: "text-[#e97bfc]", heading: "text-[#f8c8fc]" },
+    working: { ring: "border-accent/35 bg-accent/10", text: "text-accent", heading: "text-accent-soft" },
     paid: { ring: "border-emerald-400/40 bg-emerald-400/10", text: "text-emerald-300", heading: "text-emerald-200" },
     pending: { ring: "border-amber-400/40 bg-amber-400/10", text: "text-amber-300", heading: "text-amber-200" },
     failed: { ring: "border-rose-400/40 bg-rose-400/10", text: "text-rose-300", heading: "text-rose-200" },
@@ -314,7 +314,7 @@ const StatusDisplay = () => {
                             does not render — a translucent ticket would export as
                             something the buyer never saw. */}
                         <div ref={wrapperRef} className="rounded-[22px] bg-[#0b0710] p-4">
-                            <div className="overflow-hidden rounded-2xl border border-[#e97bfc]/30 bg-[#150d1b]">
+                            <div className="overflow-hidden rounded-2xl border border-accent/30 bg-[#150d1b]">
                                 <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-[#1d1226] px-5 py-3.5">
                                     <Image
                                         src="/pfelogo.png"
@@ -324,7 +324,7 @@ const StatusDisplay = () => {
                                         className="h-7 w-auto"
                                         priority
                                     />
-                                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#f8c8fc]">
+                                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent-soft">
                                         Entry ticket
                                     </span>
                                 </div>
@@ -360,13 +360,13 @@ const StatusDisplay = () => {
                                     <p className="mt-1.5 text-2xl font-bold leading-tight text-white break-words">
                                         {details.name}
                                     </p>
-                                    <p className="mt-2 text-lg font-medium leading-snug text-[#f8c8fc] text-balance">
+                                    <p className="mt-2 text-lg font-medium leading-snug text-accent-soft text-balance">
                                         {details.description}
                                     </p>
 
                                     <div className="mt-3.5 flex flex-wrap items-center justify-center gap-2">
                                         {details.sku && SKU_LABEL[details.sku] && (
-                                            <span className="rounded-full border border-[#e97bfc]/40 bg-[#e97bfc]/10 px-3 py-1 text-xs font-semibold text-[#f8c8fc]">
+                                            <span className="rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-xs font-semibold text-accent-soft">
                                                 {SKU_LABEL[details.sku]}
                                             </span>
                                         )}
@@ -397,7 +397,7 @@ const StatusDisplay = () => {
 
                         <button
                             onClick={handleDownload}
-                            className="mt-7 w-full rounded-lg bg-[#e97bfc] px-6 py-3.5 text-lg font-bold text-black transition-[transform,box-shadow] duration-200 ease-out hover:shadow-lg hover:shadow-[#e97bfc]/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white active:scale-[0.99]"
+                            className="mt-7 w-full rounded-lg bg-accent px-6 py-3.5 text-lg font-bold text-black transition-[transform,box-shadow] duration-200 ease-out hover:shadow-lg hover:shadow-accent/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white active:scale-[0.99]"
                         >
                             Download Ticket
                         </button>
@@ -442,7 +442,7 @@ const StatusDisplay = () => {
                             {orderRef && <OrderRef orderId={orderRef} />}
                             <Link
                                 href="/"
-                                className="mt-7 block w-full rounded-lg bg-[#e97bfc] px-6 py-3.5 text-lg font-bold text-black transition-[transform,box-shadow] duration-200 ease-out hover:shadow-lg hover:shadow-[#e97bfc]/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white active:scale-[0.99]"
+                                className="mt-7 block w-full rounded-lg bg-accent px-6 py-3.5 text-lg font-bold text-black transition-[transform,box-shadow] duration-200 ease-out hover:shadow-lg hover:shadow-accent/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white active:scale-[0.99]"
                             >
                                 Try Again
                             </Link>

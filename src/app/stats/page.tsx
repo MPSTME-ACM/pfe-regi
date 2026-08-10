@@ -161,7 +161,7 @@ function StatsPanel({ creds, logout }: { creds: string; logout: () => void }) {
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Admin Statistics</h1>
           <button
             onClick={logout}
-            className="inline-flex min-h-11 items-center rounded-lg border border-white/10 bg-white/5 px-4 text-sm font-medium text-gray-300 transition-colors hover:border-white/20 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f8c8fc]"
+            className="inline-flex min-h-11 items-center rounded-lg border border-white/10 bg-white/5 px-4 text-sm font-medium text-gray-300 transition-colors hover:border-white/20 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-soft"
           >
             Logout
           </button>

@@ -79,14 +79,14 @@ function SyncPanel({ creds, logout }: { creds: string; logout: () => void }) {
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Admin Controls</h1>
           <button
             onClick={logout}
-            className="inline-flex min-h-11 items-center rounded-lg border border-white/10 bg-white/5 px-4 text-sm font-medium text-gray-300 transition-colors hover:border-white/20 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f8c8fc]"
+            className="inline-flex min-h-11 items-center rounded-lg border border-white/10 bg-white/5 px-4 text-sm font-medium text-gray-300 transition-colors hover:border-white/20 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-soft"
           >
             Logout
           </button>
         </header>
 
         <section className="rounded-2xl border border-white/10 bg-black/30 p-5 backdrop-blur-md sm:p-7">
-          <h2 className="text-base font-semibold text-[#f8c8fc]">Google Sheets</h2>
+          <h2 className="text-base font-semibold text-accent-soft">Google Sheets</h2>
           <p className="mt-2 max-w-prose text-sm leading-relaxed text-gray-300">
             Click the button below to sync all registrations to your connected Google Sheet.
           </p>
@@ -94,15 +94,15 @@ function SyncPanel({ creds, logout }: { creds: string; logout: () => void }) {
           <button
             onClick={handleSync}
             disabled={isLoading || locked}
-            className="mt-6 inline-flex min-h-11 items-center justify-center rounded-lg bg-[#e97bfc] px-5 py-3 font-bold text-black transition-[transform,box-shadow,opacity] duration-200 ease-out hover:shadow-lg hover:shadow-[#e97bfc]/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white active:scale-[0.99] disabled:opacity-50 disabled:active:scale-100"
+            className="mt-6 inline-flex min-h-11 items-center justify-center rounded-lg bg-accent px-5 py-3 font-bold text-black transition-[transform,box-shadow,opacity] duration-200 ease-out hover:shadow-lg hover:shadow-accent/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white active:scale-[0.99] disabled:opacity-50 disabled:active:scale-100"
           >
             {isLoading ? 'Syncing...' : 'Sync to Google Sheets'}
           </button>
 
           <div aria-live="polite" className="mt-5 empty:mt-0">
             {status.kind === 'ok' && (
-              <div className="rounded-lg border border-[#e97bfc]/30 bg-[#e97bfc]/10 px-4 py-3">
-                <p className="text-sm text-[#f8c8fc]">{status.message}</p>
+              <div className="rounded-lg border border-accent/30 bg-accent/10 px-4 py-3">
+                <p className="text-sm text-accent-soft">{status.message}</p>
                 <p className="mt-1 text-xs text-gray-400">Last run at {status.at}</p>
               </div>
             )}
@@ -126,7 +126,7 @@ function SyncPanel({ creds, logout }: { creds: string; logout: () => void }) {
                 </p>
                 <button
                   onClick={logout}
-                  className="mt-3 inline-flex min-h-11 items-center rounded-lg border border-white/15 bg-white/5 px-4 text-sm font-medium text-white transition-colors hover:border-white/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f8c8fc]"
+                  className="mt-3 inline-flex min-h-11 items-center rounded-lg border border-white/15 bg-white/5 px-4 text-sm font-medium text-white transition-colors hover:border-white/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-soft"
                 >
                   Sign in again
                 </button>

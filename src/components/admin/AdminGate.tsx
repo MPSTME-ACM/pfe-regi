@@ -65,7 +65,7 @@ function LoginForm({
   const field =
     'w-full bg-white/[0.04] border border-white/15 rounded-lg px-3.5 py-3 text-white ' +
     'placeholder-gray-600 outline-none transition-[border-color,background-color,box-shadow] duration-200 ' +
-    'hover:border-white/25 focus:border-[#e97bfc]/60 focus:bg-white/[0.07] focus:ring-2 focus:ring-[#e97bfc]/25';
+    'hover:border-white/25 focus:border-accent/60 focus:bg-white/[0.07] focus:ring-2 focus:ring-accent/25';
 
   return (
     <div className="w-full max-w-[22rem]">
@@ -132,7 +132,7 @@ function LoginForm({
               type="button"
               onClick={() => setShowPassword((v) => !v)}
               aria-pressed={showPassword}
-              className="absolute inset-y-0 right-0 px-3.5 text-xs font-medium text-gray-400 hover:text-white focus-visible:outline-2 focus-visible:outline-[#f8c8fc] focus-visible:outline-offset-[-4px] rounded-r-lg transition-colors"
+              className="absolute inset-y-0 right-0 px-3.5 text-xs font-medium text-gray-400 hover:text-white focus-visible:outline-2 focus-visible:outline-accent-soft focus-visible:outline-offset-[-4px] rounded-r-lg transition-colors"
             >
               {showPassword ? 'Hide' : 'Show'}
             </button>
@@ -154,7 +154,7 @@ function LoginForm({
           <button
             type="submit"
             disabled={busy}
-            className="mt-6 w-full rounded-lg bg-[#e97bfc] py-3 font-semibold text-black transition-[transform,box-shadow,opacity] duration-200 ease-out hover:shadow-lg hover:shadow-[#e97bfc]/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white active:scale-[0.99] disabled:opacity-50 disabled:active:scale-100"
+            className="mt-6 w-full rounded-lg bg-accent py-3 font-semibold text-black transition-[transform,box-shadow,opacity] duration-200 ease-out hover:shadow-lg hover:shadow-accent/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white active:scale-[0.99] disabled:opacity-50 disabled:active:scale-100"
           >
             {busy ? 'Checking…' : 'Sign in'}
           </button>

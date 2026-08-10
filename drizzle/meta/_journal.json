@@ -64,6 +64,13 @@
       "when": 1786264421562,
       "tag": "0008_drop_legacy_domain",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1786342382162,
+      "tag": "0009_coupons_and_referrers",
+      "breakpoints": true
     }
   ]
 }

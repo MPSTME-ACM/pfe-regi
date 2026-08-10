@@ -4,6 +4,7 @@ import { eq, inArray, or, type SQL } from 'drizzle-orm';
 import qrcode from 'qrcode';
 import { sendMail, type TicketItem } from '@/lib/mail/mailUtil';
 import { CAPSTONE_SLUG } from '@/lib/registration/capacity';
+import { burnRedemption } from '@/lib/registration/coupons';
 import { getSettings } from '@/lib/settings';
 
 /**
@@ -30,6 +31,11 @@ export async function completeWithoutPayment(orderId: string): Promise<void> {
     .update(registrations)
     .set({ paymentStatus: 'comped', qrCodeUrl })
     .where(eq(registrations.orderId, orderId));
+
+  // A 100%-off coupon never reaches the gateway, so no webhook ever fires for
+  // it. Without this its reservation would simply lapse and the code would come
+  // back to life — a single-use code redeemable twice.
+  await burnRedemption(orderId);
 
   await sendTicketEmail(orderId, qrCodeUrl);
 }
