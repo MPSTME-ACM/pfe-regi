@@ -6,6 +6,7 @@ import { sendMail, type TicketItem } from '@/lib/mail/mailUtil';
 import { CAPSTONE_SLUG } from '@/lib/registration/capacity';
 import { burnRedemption } from '@/lib/registration/coupons';
 import { getSettings } from '@/lib/settings';
+import { siteUrl } from '@/lib/siteUrl';
 
 /**
  * Finish a registration that never touches the payment gateway.
@@ -23,9 +24,7 @@ export async function completeWithoutPayment(orderId: string): Promise<void> {
   if (!row) throw new Error(`completeWithoutPayment: no registration for ${orderId}`);
   if (row.paymentStatus === 'success' || row.paymentStatus === 'comped') return; // idempotent
 
-  const qrCodeUrl = await qrcode.toDataURL(
-    `${process.env.NEXT_PUBLIC_SITE_URL}/verify?orderId=${orderId}`,
-  );
+  const qrCodeUrl = await qrcode.toDataURL(`${siteUrl()}/verify?orderId=${orderId}`);
 
   await db
     .update(registrations)

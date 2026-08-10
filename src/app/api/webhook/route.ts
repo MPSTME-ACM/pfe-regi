@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import qrcode from 'qrcode';
 import { sendTicketEmail } from '@/lib/registration/completeWithoutPayment';
 import { burnRedemption, releaseRedemption } from '@/lib/registration/coupons';
+import { siteUrl } from '@/lib/siteUrl';
 import 'dotenv/config';
 
 export const config = { api: { bodyParser: false } };
@@ -77,9 +78,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: false, message: 'Amount mismatch' }, { status: 400 });
       }
 
-      const qrCodeUrl = await qrcode.toDataURL(
-        `${process.env.NEXT_PUBLIC_SITE_URL}/verify?orderId=${orderId}`,
-      );
+      const qrCodeUrl = await qrcode.toDataURL(`${siteUrl()}/verify?orderId=${orderId}`);
       await db
         .update(registrations)
         .set({ paymentStatus: 'success', qrCodeUrl })

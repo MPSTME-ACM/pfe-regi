@@ -8,6 +8,7 @@ import { getSettings, paiseToRupees } from '@/lib/settings';
 import { resolvePrice, REJECTION_MESSAGES, type Sku } from '@/lib/pricing/resolvePrice';
 import { findCoupon, findReferrerId, couponUsage, reserveCoupon } from '@/lib/registration/coupons';
 import { generateOrderId } from '@/lib/registration/orderId';
+import { siteUrl } from '@/lib/siteUrl';
 import {
   CAPSTONE_SLUG,
   SKUS,
@@ -210,7 +211,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, order_id: orderId, free: true });
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    // Not `|| 'http://localhost:3000'`. That fallback made a missing origin look
+    // plausible instead of loud: Cashfree accepted the order, took the money, and
+    // returned the student to localhost. siteUrl() throws instead.
+    const baseUrl = siteUrl();
     const order = await cashfree.PGCreateOrder({
       order_id: orderId,
       order_amount: paiseToRupees(amountPaid),
