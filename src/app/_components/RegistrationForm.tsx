@@ -10,6 +10,7 @@ import SkuChooser, { SKUS } from './SkuChooser';
 import TrackFields, { type TrackFieldName } from './TrackFields';
 import { type TrackOption } from './registrationTypes';
 import type { EventConfig, FieldOptions, FieldLabels } from '@/lib/db/schema';
+import CouponField, { formatPaiseClient, type AppliedCoupon } from './CouponField';
 import type { Sku } from '@/lib/pricing/resolvePrice';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -155,6 +156,11 @@ export default function RegistrationForm({
   merchantEmail: string;
 }) {
   const [formData, setFormData] = useState<Draft>(EMPTY_DRAFT);
+  // Kept out of `Draft` on purpose: the draft is persisted to localStorage, and
+  // a discount restored from a previous session could be stale or since revoked.
+  // A code is cheap to retype and must be re-checked against the server anyway.
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
   const [tracks, setTracks] = useState<TrackOption[]>(initialTracks);
   const router = useRouter();
   const [progress, setProgress] = useState(0);
@@ -256,14 +262,45 @@ export default function RegistrationForm({
     }
   };
 
+  // A quote is only true for the selection it was priced against. Changing the
+  // SKU or a track invalidates it, and a discount left on screen after the
+  // change would be a price we do not intend to honour — checkout reprices from
+  // `settings` regardless. Dropping it is the only safe move; re-applying is one
+  // click, and a wrong price is not.
   const handleSkuChange = (sku: Sku) => {
     setSubmitError('');
+    setAppliedCoupon(null);
     setFormData((prev) => ({ ...prev, sku }));
   };
 
   const handleTrackChange = (name: TrackFieldName, value: string) => {
     setSubmitError('');
+    setAppliedCoupon(null);
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  /**
+   * The body /api/quote needs, or null when the selection cannot be priced yet.
+   *
+   * Deliberately derived from `buildPayload()` rather than assembled by hand, so
+   * the quote and the checkout can never disagree about which track slug goes in
+   * which key — the routing rule that "a single beginner track is sent as
+   * beginnerTrack" lives in exactly one place.
+   */
+  const buildQuoteBody = (): Record<string, string> | null => {
+    const payload = buildPayload();
+    if (typeof payload === 'string') return null;
+    const { sku, beginnerTrack, advancedTrack, email, contact } = payload;
+    return {
+      sku,
+      ...(beginnerTrack ? { beginnerTrack } : {}),
+      ...(advancedTrack ? { advancedTrack } : {}),
+      // Sent so a per-person redemption cap is evaluated against the right
+      // person. Blank while the fields are empty, which reads as "nobody" and
+      // simply quotes the optimistic case; checkout enforces it either way.
+      email,
+      contact,
+    };
   };
 
   // ── submit ─────────────────────────────────────────────────────────────────
@@ -286,6 +323,10 @@ export default function RegistrationForm({
       sku: formData.sku,
     };
     if (formData.referral.trim()) payload.referral = formData.referral.trim();
+    // Only a code the server has already accepted is sent. An unchecked string
+    // would make create-order 400 and block checkout outright; handleSubmit
+    // stops that earlier with a message telling them to press Apply.
+    if (appliedCoupon) payload.couponCode = appliedCoupon.code;
 
     if (formData.sku === 'single') {
       const track = tracks.find((t) => t.slug === formData.singleTrack);
@@ -325,13 +366,25 @@ export default function RegistrationForm({
     setFormErrors(errors);
     if (errors.email || errors.contact) return;
 
+    // A typed-but-unapplied code is the quiet failure worth blocking: sending it
+    // makes create-order reject the whole checkout, and dropping it charges full
+    // price to someone who believes they have a discount. Neither is acceptable,
+    // so ask.
+    if (couponInput.trim() && !appliedCoupon) {
+      setSubmitError('Press Apply to check your coupon code, or clear the box to continue without one.');
+      return;
+    }
+
     const payload = buildPayload();
     if (typeof payload === 'string') {
       setSubmitError(payload);
       return;
     }
 
-    if (!cashfree) {
+    // A fully-discounted order never reaches the gateway — completeWithoutPayment
+    // issues the ticket server-side — so a slow or blocked Cashfree SDK must not
+    // stop it. Only gate on the SDK when there is actually money to take.
+    if (!cashfree && appliedCoupon?.amount !== 0) {
       setSubmitError('Payment system is still loading. Please try again in a moment.');
       return;
     }
@@ -359,6 +412,13 @@ export default function RegistrationForm({
       } else if (data.error === 'REGISTRATION_CLOSED') {
         // The admin closed registration while this tab was open.
         setSubmitError('Registration has just closed. Please refresh the page.');
+      } else if (data.error === 'COUPON_REJECTED' || data.error === 'COUPON_INVALID') {
+        // The quote said yes and checkout said no — the code was exhausted or
+        // revoked in between, since checkout re-reads usage with the coupon row
+        // locked. Drop it so the price on screen stops claiming a discount that
+        // will not be honoured, and let them try another.
+        setAppliedCoupon(null);
+        setSubmitError(data.message || 'That code can no longer be used. Please remove it and try again.');
       } else if (data.error === 'TRACK_FULL') {
         // The message names the track by display name only; do not try to work
         // out which slug it was. Re-reading availability disables it properly.
@@ -454,15 +514,44 @@ export default function RegistrationForm({
                 <SelectField label={fieldLabels.year.label} placeholder={fieldLabels.year.placeholder} name="year" options={toOptions(fieldOptions.years)} value={formData.year} onChange={handleInputChange} required />
                 <InputField label={fieldLabels.referral.label} type="text" name="referral" placeholder={fieldLabels.referral.placeholder} value={formData.referral} onChange={handleInputChange} />
 
+                {/* Below Referral because the two are different things and get
+                    confused: a referral attributes the signup to a committee
+                    member and changes no price, a coupon changes the price. */}
+                <CouponField
+                  value={couponInput}
+                  onChange={setCouponInput}
+                  applied={appliedCoupon}
+                  onApplied={setAppliedCoupon}
+                  onCleared={() => setAppliedCoupon(null)}
+                  buildQuoteBody={buildQuoteBody}
+                />
+
                 <div className="mt-12 text-center">
                   {/* Display only. Whatever this says is cosmetic — api/create-order
                       recomputes the amount from `settings` and never reads one
                       off the request. */}
                   <p className="text-2xl font-bold text-white" aria-live="polite">
-                    {formData.sku
-                      ? <>Ticket Price: {priceLabels[formData.sku]}</>
-                      : <span className="text-lg font-semibold text-gray-400">Choose an option above to see the price</span>}
+                    {!formData.sku ? (
+                      <span className="text-lg font-semibold text-gray-400">Choose an option above to see the price</span>
+                    ) : appliedCoupon ? (
+                      <>
+                        Ticket Price:{' '}
+                        {/* The struck-through original stays visible: a discount
+                            you cannot see the size of is not reassuring. */}
+                        <span className="font-medium text-gray-500 line-through decoration-gray-500">
+                          {formatPaiseClient(appliedCoupon.base)}
+                        </span>{' '}
+                        <span className="text-accent-soft">{formatPaiseClient(appliedCoupon.amount)}</span>
+                      </>
+                    ) : (
+                      <>Ticket Price: {priceLabels[formData.sku]}</>
+                    )}
                   </p>
+                  {appliedCoupon?.amount === 0 && (
+                    <p className="mt-2 text-sm font-medium text-accent-soft">
+                      This code covers the full amount — you will not be asked to pay.
+                    </p>
+                  )}
                   {/* Held to a short measure so it stays 2-3 balanced lines
                       instead of one 95-character line on desktop and a ragged
                       block on mobile. */}
