@@ -6,7 +6,8 @@ import { registrations, tracks, coupons } from '@/lib/db/schema';
 import { eq, inArray } from 'drizzle-orm';
 import { getSettings, paiseToRupees } from '@/lib/settings';
 import { resolvePrice, REJECTION_MESSAGES, type Sku } from '@/lib/pricing/resolvePrice';
-import { findCoupon, findReferrerId, couponUsage, reserveCoupon } from '@/lib/registration/coupons';
+import { findCoupon, couponUsage, reserveCoupon } from '@/lib/registration/coupons';
+import { resolveReferrerId } from '@/lib/registration/referral';
 import { generateOrderId } from '@/lib/registration/orderId';
 import { siteUrl } from '@/lib/siteUrl';
 import {
@@ -90,7 +91,11 @@ export async function POST(request: Request) {
     // Attribution only, and deliberately forgiving: an unknown or inactive
     // referrer code is ignored rather than rejected. A typo in an optional field
     // must never stop someone registering.
-    const referrerId = await findReferrerId(body.referral);
+    //
+    // Falls back to the /r/<CODE> cookie when nothing was typed, which is the
+    // case this exists for — the buyer who followed a referrer's link and never
+    // knew there was a code to remember. Typed always wins; see lib/referral.
+    const referrerId = await resolveReferrerId(body.referral);
 
     const prices = {
       capstone: settings.priceCapstone,

@@ -135,6 +135,7 @@ export default function RegistrationForm({
   eventConfig,
   fieldOptions,
   fieldLabels,
+  referredBy,
   tracks: initialTracks,
   priceLabels,
   cashfreeMode,
@@ -145,6 +146,9 @@ export default function RegistrationForm({
   fieldOptions: FieldOptions;
   /** Labels and placeholders, editable at /admin. Keys are the column names. */
   fieldLabels: FieldLabels;
+  /** Referrer name from the /r/<CODE> cookie. Display only — checkout reads the
+   *  cookie itself, so nothing here can change who gets credited. */
+  referredBy: string | null;
   /** Server-rendered availability, so the selects are correct on first paint. */
   tracks: TrackOption[];
   /** Display only. The server computes and stores the real amount. */
@@ -512,6 +516,19 @@ export default function RegistrationForm({
                 )}
 
                 <SelectField label={fieldLabels.year.label} placeholder={fieldLabels.year.placeholder} name="year" options={toOptions(fieldOptions.years)} value={formData.year} onChange={handleInputChange} required />
+                {/* Arrived through a referrer's link. Shown, not editable: the
+                    cookie is what checkout reads, so an input here could only
+                    ever disagree with the thing that actually decides credit.
+                    The typed field below still appears, for anyone holding a
+                    code without a link — and a typed code wins over the cookie. */}
+                {referredBy && (
+                  <div className="mb-6 rounded-lg border border-hairline bg-white/[0.04] px-4 py-3">
+                    <p className="text-sm text-gray-300">
+                      Referred by <span className="font-medium text-accent-soft">{referredBy}</span>
+                    </p>
+                  </div>
+                )}
+
                 <InputField label={fieldLabels.referral.label} type="text" name="referral" placeholder={fieldLabels.referral.placeholder} value={formData.referral} onChange={handleInputChange} />
 
                 {/* Below Referral because the two are different things and get

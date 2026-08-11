@@ -102,6 +102,23 @@ The webhook needs the **raw unparsed body** for signature verification — `getR
 
 `api/sync-sheet` diffs the live table against the **`PFE2026`** tab, keyed on the `Order ID` column looked up **by header name, not index**, then batch-updates changed rows and appends new ones. The diff logic is a pure function in `src/lib/registration/sheetSync.ts`. `Sheet1` is the frozen 2025 record and is never written to. Triggered manually from `/sync`, and by an external cron — which is why the Dockerfile installs `curl` ("Need this for Sync Job").
 
+## Referral attribution
+
+Two channels, and the precedence between them is deliberate.
+
+- **The link.** `GET /r/<CODE>` (`src/app/r/[code]/route.ts`) sets an **httpOnly** `pfe_ref` cookie for 30 days and 307s to `/`. A Route Handler, not a page — server components cannot set cookies. `create-order` reads the cookie server-side, so attribution never depends on the buyer typing or remembering anything.
+- **The typed `Referral` field**, for someone holding a code with no link.
+
+`resolveReferrerId()` in `src/lib/registration/referral.ts` decides: **typed wins when non-empty, cookie fills the gap.** A typed-but-invalid code returns null rather than falling through to the cookie — someone who typed something meant it, and crediting a different referrer instead is worse than crediting none.
+
+The cookie's attribution is rendered as **read-only text** ("Referred by X"), never prefilled into the input. Prefilling plus a cookie fallback means deleting the prefilled value still credits the referrer — a silent override of an explicit action, on a field people get paid on.
+
+Codes are restricted to `[A-Z0-9-]` (`isValidReferrerCode`) because they become URLs. `normaliseCode` only trims and uppercases, so without that check an admin could create `ACM SNDT` — a valid row whose link can never work.
+
+Namespaced under `/r/` rather than the root. A root-level `[code]` catch-all would render the form for every mistyped URL instead of 404ing, and a future route colliding with a referrer code would break that referrer silently.
+
+**Referrers are created at `/admin` → Coupons → Referrers.** Before that existed nothing could write to the table, so every code typed into the form matched no row and credited nobody — production had zero referrer rows and zero attributed registrations. There is no DELETE: `pferegistration.referrer_id` points at these, so retirement is `active = false`, which stops new links and keeps past credit.
+
 ## Opening and closing registration
 
 Go to **`/admin`** and flip the toggle. That is the whole procedure. No commit, no deploy.

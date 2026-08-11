@@ -7,10 +7,15 @@ import type { CouponType, Sku } from '@/lib/pricing/resolvePrice';
 // ─────────────────────────────────────────────────────────────────────────────
 // The Coupons tab.
 //
-// Three things live here, and only the first two are writable:
+// Three things live here:
 //   1. a summary of what discounting has actually cost,
 //   2. create-one / generate-many, which is how ACM's member codes get made,
-//   3. the referrer leaderboard, which is READ-ONLY — there is no referrers API.
+//   3. referrers — create, deactivate, and copy each one's /r/<CODE> link.
+//
+// (3) was read-only until the link work, on the reasoning that a referrer code
+// carries no discount so there was nothing to get wrong at 2am. That hid a real
+// bug: nothing could write to `referrers`, so every code typed into the form's
+// Referral box matched no row and credited nobody. Production had zero rows.
 //
 // ── Why this editor has no save/discard/dirty ────────────────────────────────
 //
@@ -76,6 +81,7 @@ export interface CouponSummary {
 }
 
 export interface ReferrerStat {
+  id: number;
   code: string;
   name: string;
   active: boolean;
@@ -122,6 +128,8 @@ export interface CouponsEditor {
   create: (code: string, rules: CouponRules) => Promise<CreateResult>;
   generate: (count: number, prefix: string, rules: CouponRules) => Promise<GenerateResult>;
   setEnabled: (id: number, enabled: boolean) => Promise<void>;
+  createReferrer: (code: string, name: string) => Promise<{ ok: boolean; message: string }>;
+  setReferrerActive: (id: number, active: boolean) => Promise<void>;
   // No `dirty`, no `save`, no `discard`. See the header — this is on purpose.
 }
 
@@ -271,7 +279,59 @@ export function useCouponsEditor(creds: string, active: boolean): CouponsEditor 
     [creds, expired],
   );
 
-  return { coupons, summary, referrers, status, pending, reload, create, generate, setEnabled };
+  // Referrer writes go straight to the server on their own request, like every
+  // other control on this tab. They must never be routed through the admin
+  // page's sticky save bar: that bar is gated `tab !== 'coupons'`, so a change
+  // parked in it from here would be silently dropped while reporting "Saved".
+  const createReferrer = useCallback(
+    async (code: string, name: string) => {
+      try {
+        const res = await fetch('/api/admin/referrers', {
+          method: 'POST',
+          headers: { Authorization: creds, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, name }),
+        });
+        if (expired(res)) return { ok: false, message: 'Session expired' };
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          return { ok: false, message: data.message || 'Could not create that referrer' };
+        }
+        // Reload rather than splice: the leaderboard row carries aggregate
+        // counts this response does not have, and a hand-built row would show
+        // "undefined sign-ups" until the next refresh.
+        await reload();
+        return { ok: true, message: `${data.referrer.code} created` };
+      } catch (e) {
+        return { ok: false, message: e instanceof Error ? e.message : String(e) };
+      }
+    },
+    [creds, expired, reload],
+  );
+
+  const setReferrerActive = useCallback(
+    async (id: number, active: boolean) => {
+      try {
+        const res = await fetch('/api/admin/referrers', {
+          method: 'PATCH',
+          headers: { Authorization: creds, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, active }),
+        });
+        if (expired(res)) return;
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message || 'Could not update the referrer');
+        setReferrers((rows) => rows.map((r) => (r.id === id ? { ...r, active } : r)));
+        setStatus({ kind: 'ok', message: `${data.referrer.code} ${active ? 'activated' : 'deactivated'}` });
+      } catch (e) {
+        setStatus({ kind: 'error', message: e instanceof Error ? e.message : String(e) });
+      }
+    },
+    [creds, expired],
+  );
+
+  return {
+    coupons, summary, referrers, status, pending, reload, create, generate, setEnabled,
+    createReferrer, setReferrerActive,
+  };
 }
 
 // ─── formatting ──────────────────────────────────────────────────────────────
@@ -1152,7 +1212,9 @@ function Stat({ value, label, hint }: { value: string; label: string; hint?: str
 }
 
 export function CouponsTab({ editor }: { editor: CouponsEditor }) {
-  const { coupons, summary, referrers, status } = editor;
+  // `referrers` is no longer read here — ReferrersPanel takes the editor and
+  // reads it itself, so the list and its write buttons stay in one component.
+  const { coupons, summary, status } = editor;
   const [query, setQuery] = useState('');
   const copier = useCopier();
 
@@ -1279,47 +1341,155 @@ export function CouponsTab({ editor }: { editor: CouponsEditor }) {
         )}
       </div>
 
-      {/* Read-only. There is no referrers endpoint, by decision: a referrer code
-          credits a committee member and carries no discount, so there is nothing
-          here to get wrong at 2am. */}
-      <div className="mt-8 border-t border-hairline pt-6">
-        <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-accent-soft">
-          Referrers
-        </h3>
-        <p className="mt-1.5 max-w-[68ch] text-xs leading-relaxed text-gray-500">
-          Attribution only — a referral code never changes a price. Sign-ups counts every
-          registration carrying the code, including abandoned and failed ones; paid counts only what
-          actually settled, which is why a referrer can read as 10 sign-ups and ₹0. Read-only here.
-        </p>
+      <ReferrersPanel editor={editor} />
+    </section>
+  );
+}
 
-        {referrers.length === 0 ? (
-          <p className="mt-4 text-sm text-gray-500">No referrer codes yet.</p>
-        ) : (
-          <div className="mt-4 divide-y divide-hairline/60 border-t border-hairline">
-            {referrers.map((r) => (
-              <div key={r.code} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-3">
-                <div className="min-w-0 flex-1 basis-40">
-                  <p className="truncate text-sm font-medium text-white">{r.name}</p>
-                  <p className="font-mono text-xs text-gray-500">{r.code}</p>
-                </div>
-                {!r.active && (
-                  <span className="rounded-md bg-white/[0.06] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-400 ring-1 ring-inset ring-hairline">
-                    Inactive
-                  </span>
-                )}
-                <div className="shrink-0 text-right">
-                  <p className="text-sm tabular-nums text-white">{r.registrations}</p>
-                  <p className="text-[10px] uppercase tracking-wider text-gray-500">sign-ups</p>
-                </div>
-                <div className="shrink-0 text-right">
-                  <p className="text-sm tabular-nums text-white">{rupees(r.paise)}</p>
-                  <p className="text-[10px] uppercase tracking-wider text-gray-500">paid</p>
-                </div>
-              </div>
-            ))}
-          </div>
+// ─── referrers ───────────────────────────────────────────────────────────────
+
+/**
+ * Referrers, and the links that make them work.
+ *
+ * This panel used to be read-only, on the reasoning that a referrer code carries
+ * no discount so there is nothing to get wrong at 2am. That was wrong in a way
+ * the leaderboard hid: nothing could write to the `referrers` table, so every
+ * code typed into the form's Referral box resolved to null and credited nobody.
+ * Production had zero rows and zero attributed registrations.
+ *
+ * The link is the point. A code someone has to remember and retype is lost some
+ * fraction of the time, silently — no one reports a signup credited to no one.
+ * /r/<CODE> sets an httpOnly cookie that checkout reads server-side, so
+ * attribution no longer depends on the buyer doing anything at all.
+ */
+function ReferrersPanel({ editor }: { editor: CouponsEditor }) {
+  const { referrers, createReferrer, setReferrerActive } = editor;
+  const { copied, copy } = useCopier();
+
+  const [code, setCode] = useState('');
+  const [name, setName] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
+
+  // window, not SITE_URL: this is the origin the admin is actually looking at,
+  // so the copied link is always the one that works from where they are.
+  const origin = typeof window === 'undefined' ? '' : window.location.origin;
+  const linkFor = (c: string) => `${origin}/r/${c}`;
+
+  const submit = async () => {
+    const trimmed = code.trim().toUpperCase();
+    if (!trimmed || !name.trim()) {
+      setResult({ ok: false, message: 'Both a code and a name are needed.' });
+      return;
+    }
+    setBusy(true);
+    const r = await createReferrer(trimmed, name.trim());
+    setBusy(false);
+    setResult(r);
+    if (r.ok) {
+      setCode('');
+      setName('');
+    }
+  };
+
+  return (
+    <div className="mt-8 border-t border-hairline pt-6">
+      <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-accent-soft">
+        Referrers
+      </h3>
+      <p className="mt-1.5 max-w-[68ch] text-xs leading-relaxed text-gray-500">
+        Attribution only — a referral code never changes a price. Share the link: anyone who opens
+        it is credited automatically for the next 30 days, even if they never touch the Referral
+        box. Sign-ups counts every registration carrying the code, including abandoned and failed
+        ones; paid counts only what settled, which is why a referrer can read as 10 sign-ups and ₹0.
+      </p>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+        <div>
+          <label className={smallLabel} htmlFor="ref-code">Code</label>
+          <input
+            id="ref-code"
+            className={`${input} font-mono`}
+            value={code}
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void submit(); } }}
+            placeholder="ACM-SNDT-CAMPUS"
+            autoComplete="off"
+          />
+        </div>
+        <div>
+          <label className={smallLabel} htmlFor="ref-name">Who it credits</label>
+          <input
+            id="ref-name"
+            className={input}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void submit(); } }}
+            placeholder="ACM SNDT Campus"
+            autoComplete="off"
+          />
+        </div>
+        <button type="button" onClick={submit} disabled={busy} className={`${ghostButton} disabled:opacity-40`}>
+          {busy ? 'Adding…' : 'Add referrer'}
+        </button>
+      </div>
+
+      <div aria-live="polite">
+        {result && (
+          <p className={`mt-2 text-xs ${result.ok ? 'text-accent-soft' : 'text-red-300'}`}>
+            {result.message}
+          </p>
         )}
       </div>
-    </section>
+
+      {referrers.length === 0 ? (
+        <p className="mt-5 text-sm text-gray-500">
+          No referrer codes yet. Add one above to get a shareable link.
+        </p>
+      ) : (
+        <div className="mt-5 divide-y divide-hairline/60 border-t border-hairline">
+          {referrers.map((r) => (
+            <div key={r.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
+              <div className="min-w-0 flex-1 basis-48">
+                <p className="truncate text-sm font-medium text-white">{r.name}</p>
+                <p className="truncate font-mono text-xs text-gray-500">{linkFor(r.code)}</p>
+              </div>
+
+              {!r.active && (
+                <span className="rounded-md bg-white/[0.06] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-400 ring-1 ring-inset ring-hairline">
+                  Inactive
+                </span>
+              )}
+
+              <div className="shrink-0 text-right">
+                <p className="text-sm tabular-nums text-white">{r.registrations}</p>
+                <p className="text-[10px] uppercase tracking-wider text-gray-500">sign-ups</p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="text-sm tabular-nums text-white">{rupees(r.paise)}</p>
+                <p className="text-[10px] uppercase tracking-wider text-gray-500">paid</p>
+              </div>
+
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => copy(`ref:${r.id}`, linkFor(r.code))}
+                  className={ghostButton}
+                >
+                  {copied === `ref:${r.id}` ? 'Copied' : copied === `ref:${r.id}:failed` ? 'Copy failed' : 'Copy link'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReferrerActive(r.id, !r.active)}
+                  className={ghostButton}
+                >
+                  {r.active ? 'Deactivate' : 'Activate'}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

@@ -125,6 +125,9 @@ export async function GET(request: Request) {
 
   const leaderboard = await db
     .select({
+      // Needed to toggle a referrer: the code is the display key but the id is
+      // what api/admin/referrers PATCHes, and a code can be re-cased by hand.
+      id: referrers.id,
       code: referrers.code,
       name: referrers.name,
       active: referrers.active,
