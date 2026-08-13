@@ -12,6 +12,8 @@ import { type TrackOption } from './registrationTypes';
 import type { EventConfig, FieldOptions, FieldLabels } from '@/lib/db/schema';
 import CouponField, { formatPaiseClient, type AppliedCoupon } from './CouponField';
 import type { Sku } from '@/lib/pricing/resolvePrice';
+// A bare constant module — safe to import here because it reaches nothing.
+import { OTHER_COLLEGE } from '@/lib/registration/college';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // The public registration form, 2026 model.
@@ -50,6 +52,8 @@ interface Draft {
   email: string;
   contact: string;
   college: string;
+  /** Only used when `college` is 'Other'. Blank otherwise. */
+  collegeOther: string;
   course: string;
   department: string;
   year: string;
@@ -62,14 +66,11 @@ interface Draft {
 }
 
 const EMPTY_DRAFT: Draft = {
-  name: '', email: '', contact: '', college: '', course: '', department: '', year: '',
+  name: '', email: '', contact: '', college: '', collegeOther: '', course: '', department: '', year: '',
   referral: '', sku: '', singleTrack: '', beginnerTrack: '', advancedTrack: '',
 };
 
 const DRAFT_KEY = 'pfe-form-data';
-
-/** The college value that switches Course and Department to free text. */
-const OTHER_COLLEGE = 'Other';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const CONTACT_RE = /^[6-9]\d{9}$/;
@@ -80,10 +81,15 @@ const BASE_REQUIRED = [
   'name', 'email', 'contact', 'college', 'course', 'department', 'year', 'sku',
 ] as const satisfies readonly (keyof Draft)[];
 
-function requiredFor(sku: Sku | ''): (keyof Draft)[] {
-  if (sku === 'single') return [...BASE_REQUIRED, 'singleTrack'];
-  if (sku === 'bundle') return [...BASE_REQUIRED, 'beginnerTrack', 'advancedTrack'];
-  return [...BASE_REQUIRED];
+function requiredFor(sku: Sku | '', college: string): (keyof Draft)[] {
+  // `collegeOther` is required only on the branch that renders it. Counting it
+  // unconditionally would leave the completion ring permanently one short for
+  // every NMIMS registrant, who never sees the field.
+  const base: (keyof Draft)[] =
+    college === OTHER_COLLEGE ? [...BASE_REQUIRED, 'collegeOther'] : [...BASE_REQUIRED];
+  if (sku === 'single') return [...base, 'singleTrack'];
+  if (sku === 'bundle') return [...base, 'beginnerTrack', 'advancedTrack'];
+  return base;
 }
 
 /**
@@ -117,6 +123,7 @@ function restoreDraft(raw: string, tracks: TrackOption[]): Draft | null {
     email: str('email'),
     contact: str('contact'),
     college: str('college'),
+    collegeOther: str('collegeOther'),
     course: str('course'),
     department: str('department'),
     year: str('year'),
@@ -204,7 +211,10 @@ export default function RegistrationForm({
   // ── progress ring ──────────────────────────────────────────────────────────
   // The denominator moves with the SKU: a capstone buyer has no track to pick,
   // so a full capstone form must still read 100%.
-  const required = useMemo(() => requiredFor(formData.sku), [formData.sku]);
+  const required = useMemo(
+    () => requiredFor(formData.sku, formData.college),
+    [formData.sku, formData.college],
+  );
 
   useEffect(() => {
     const filled = required.filter((key) => formData[key] !== '').length;
@@ -257,7 +267,9 @@ export default function RegistrationForm({
       // field the new control cannot display, and post a course that is not on
       // the list.
       if (name === 'college' && value !== prev.college) {
-        return { ...prev, college: value, course: '', department: '' };
+        // collegeOther cleared too: leaving a stale "VJTI Mumbai" behind after a
+        // switch back to NMIMS would post a contradiction the form cannot show.
+        return { ...prev, college: value, collegeOther: '', course: '', department: '' };
       }
       return { ...prev, [name]: value };
     });
@@ -326,6 +338,12 @@ export default function RegistrationForm({
       year: formData.year.trim(),
       sku: formData.sku,
     };
+    // Sent only on the branch that collects it. On any other college the field
+    // was never rendered, so an empty string here would be noise the server has
+    // to strip anyway.
+    if (formData.college === OTHER_COLLEGE && formData.collegeOther.trim()) {
+      payload.collegeOther = formData.collegeOther.trim();
+    }
     if (formData.referral.trim()) payload.referral = formData.referral.trim();
     // Only a code the server has already accepted is sent. An unchecked string
     // would make create-order 400 and block checkout outright; handleSubmit
@@ -505,6 +523,10 @@ export default function RegistrationForm({
                     they become free text rather than forcing a wrong pick. */}
                 {isOtherCollege ? (
                   <>
+                    {/* Asked first: without it the college is recorded as the
+                        literal word "Other" and the actual name is lost, which
+                        is why no report could ever break down non-NMIMS signups. */}
+                    <InputField label={fieldLabels.collegeOther.label} type="text" placeholder={fieldLabels.collegeOther.placeholder} name="collegeOther" value={formData.collegeOther} onChange={handleInputChange} required />
                     <InputField label={fieldLabels.course.label} type="text" placeholder={fieldLabels.course.placeholder} name="course" value={formData.course} onChange={handleInputChange} required />
                     <InputField label={fieldLabels.department.label} type="text" placeholder={fieldLabels.department.placeholder} name="department" value={formData.department} onChange={handleInputChange} required />
                   </>

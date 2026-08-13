@@ -5,6 +5,7 @@ import { db } from '@/lib/db';
 import { registrations, tracks, coupons } from '@/lib/db/schema';
 import { eq, inArray } from 'drizzle-orm';
 import { getSettings, paiseToRupees } from '@/lib/settings';
+import { OTHER_COLLEGE } from '@/lib/registration/college';
 import { resolvePrice, REJECTION_MESSAGES, type Sku } from '@/lib/pricing/resolvePrice';
 import { findCoupon, couponUsage, reserveCoupon } from '@/lib/registration/coupons';
 import { resolveReferrerId } from '@/lib/registration/referral';
@@ -33,6 +34,8 @@ const cashfree = new Cashfree(
 interface Body {
   name: string; email: string; contact: string;
   college: string; course: string; department: string; year: string;
+  /** The typed name, required only when `college` is the literal 'Other'. */
+  collegeOther?: string | null;
   sku: Sku;
   /** Track slugs, not ids — ids are an implementation detail the form should not carry. */
   beginnerTrack?: string | null;
@@ -55,6 +58,15 @@ function validate(body: Partial<Body>): string | null {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email!)) return 'A valid email is required';
   if (!/^[6-9]\d{9}$/.test(body.contact!)) return 'A valid 10-digit mobile number is required';
   if (!body.sku || !SKUS.includes(body.sku)) return 'Choose what you want to register for';
+
+  // Required on the 'Other' branch and ignored everywhere else. Enforced here
+  // rather than trusted from the client: the form only renders the input on
+  // that branch, so a hand-rolled POST is the only way to reach this.
+  if (body.college!.trim() === OTHER_COLLEGE) {
+    const other = typeof body.collegeOther === 'string' ? body.collegeOther.trim() : '';
+    if (!other) return 'Tell us which college you are from';
+    if (other.length > 200) return 'College name must be 200 characters or fewer';
+  }
   return null;
 }
 
@@ -166,6 +178,11 @@ export async function POST(request: Request) {
         email: body.email!.trim(),
         contact: body.contact!.trim(),
         college: body.college!.trim(),
+        // Only stored on the branch that asks for it, so `college_other` is
+        // null for every NMIMS row rather than an empty string — the stats
+        // split reads "is this null?" and blanks would break that.
+        collegeOther:
+          body.college!.trim() === OTHER_COLLEGE ? body.collegeOther!.trim() : null,
         course: body.course!.trim(),
         department: body.department!.trim(),
         year: body.year!.trim(),

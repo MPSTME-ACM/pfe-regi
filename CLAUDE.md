@@ -16,7 +16,7 @@ pnpm lint                    # bare `eslint`, flat config
 pnpm exec drizzle-kit generate | migrate | push | studio
 ```
 
-**After pulling a schema change, run `pnpm exec drizzle-kit migrate`.** `0006` creates and seeds `settings`; `0007` archives 2025 into `pferegistration_2025`, clears the live table and adds the 2026 columns; `0008` drops `domain` and seeds the seven tracks; `0010` adds `field_labels` and appends "Sixth Year" to the existing row (a changed column DEFAULT does not touch rows that already exist, and `settings` is a singleton that always does). Without them `/admin` errors and the home page falls back to "registration closed".
+**After pulling a schema change, run `pnpm exec drizzle-kit migrate`.** `0006` creates and seeds `settings`; `0007` archives 2025 into `pferegistration_2025`, clears the live table and adds the 2026 columns; `0008` drops `domain` and seeds the seven tracks; `0010` adds `field_labels` and appends "Sixth Year" to the existing row (a changed column DEFAULT does not touch rows that already exist, and `settings` is a singleton that always does); `0011` adds the sheet-sync lease and run log, seeding the singleton `sync_state` row — an `UPDATE` against an empty table claims nothing, so without the seed every sync reports "already running" forever; `0012` adds `college_other`. Without them `/admin` errors and the home page falls back to "registration closed".
 
 **`drizzle-kit generate` cannot run non-interactively here.** When a table has both added and dropped columns in one diff it prompts "created or renamed?", and it reads raw keypresses — piping input hangs forever. Split such a change into two migrations (adds first, drops second), as `0007`/`0008` do.
 
@@ -31,7 +31,7 @@ pnpm exec drizzle-kit migrate
 ```
 - `pnpm lint` is at **zero errors and zero warnings**. Keep it there — a red lint now means you broke something.
 - `next.config.ts` sets `eslint.ignoreDuringBuilds: true`, so `pnpm build` will **not** catch lint errors. Run `pnpm lint` separately.
-- **`pnpm test`** runs vitest. Coverage is deliberately narrow: 60 cases over `src/lib/pricing/resolvePrice.ts` and nothing else. That function is where a wrong answer charges a real student the wrong amount, and it is pure, so it is exhaustively testable without a database. There is no E2E suite.
+- **`pnpm test`** runs vitest. Coverage is deliberately narrow: 66 cases over two pure modules and nothing else. `src/lib/pricing/resolvePrice.ts` is where a wrong answer charges a real student the wrong amount; `src/lib/registration/college.ts` decides what the Google Sheet's `College` column says. Both are pure, so both are exhaustively testable without a database. There is no E2E suite.
 - `scripts/mail.ts` and `scripts/qrGen.ts` have no wired-up runner. `ts-node` is a dependency but fails on both (`Unknown file extension ".ts"` — the tsconfig is ESM/bundler-oriented and `qrGen.ts` uses top-level await).
   - **`scripts/mail.ts` is the confirmation-email test harness.** Unlike `src/lib/mail/mailUtil.ts`, it takes an `orderId` and generates the QR itself, so you can preview the real email without going through a payment. Edit the placeholder call on the last line (`sendMail("email", "domain", "name", "orderid")`) and run it. **That call fires at module scope**, so importing this file sends an email as a side effect — never import it from app code.
   - Getting it to actually run needs a runner that handles ESM TypeScript (`npx tsx scripts/mail.ts`); plain `ts-node` will not work with this tsconfig.
@@ -57,6 +57,8 @@ All in `src/lib/db/schema.ts`.
 - `fieldOptions` holds the dropdown contents; `fieldLabels` holds the **wording** — one `{label, placeholder, selectPrompt?}` per form field. Its keys are the **column names** (`course`, `department`, …) and are fixed; only what registrants read is editable, so rewording a field needs no migration and no deploy. **If you do rename one, the Google Sheet, `/stats` and the registration list keep using the column names** and will disagree with the form — a "Programme"/"Course" swap was tried and reverted for exactly that reason.
 - `selectPrompt` exists only for `course` and `department` — the two fields that render as a dropdown for a known college and as free text once "Other" is picked, so they need two different hints. Everything else needs one.
 - `getSettings()` merges stored labels over `DEFAULT_FIELD_LABELS` via `withLabelDefaults()`. Without it a row written before a field existed renders the string "undefined" as that field's label.
+
+`college` is categorical: a value from `settings.fieldOptions.colleges`, or the literal `'Other'` with the typed name in **`collegeOther`**. Not folded into one column, so "NMIMS vs everyone else" stays a plain GROUP BY — deriving it from "is this string still in the dropdown?" would silently reclassify historical rows the first time an admin renames a college. `displayCollege()` in `src/lib/registration/college.ts` resolves the pair for anything a human reads, including the sheet's `College` cell.
 
 **`pferegistration_2025`** — the archive. Read-only; 2025 QR codes still resolve against it via `src/lib/registration/lookupTicket.ts`.
 
@@ -160,7 +162,7 @@ if (!auth.ok) return auth.response;
 
 Admin username is literally `admin` (`ADMIN_PASSWORD`); member is `acm` (`MEMBER_PASSWORD`). The helper fails closed when the env var is unset, and compares passwords with `timingSafeEqual` on equal-**byte**-length buffers (string length is not a safe guard — `'aé'` and `'ab'` are both 2 chars but 3 and 2 bytes, and a mismatch there throws).
 
-On the client, `src/components/admin/AdminGate.tsx` wraps any admin screen: it renders the login form, stores the `Basic …` credential in sessionStorage under `admin-creds`, and hands it to children to replay on fetches. `/admin` uses it. **`/sync`, `/stats` and `/verify` still have their own copy-pasted login forms** — migrate them to `AdminGate` when you next touch them.
+On the client, `src/components/admin/AdminGate.tsx` wraps any admin screen: it renders the login form, stores the `Basic …` credential in sessionStorage under `admin-creds`, and hands it to children to replay on fetches. All four staff routes — `/admin`, `/sync`, `/stats` and `/verify` — go through it.
 
 This is a shared password replayed from client state, not sessions. Adequate for a committee-run admin panel, but do not build anything more sensitive on it.
 
@@ -171,7 +173,6 @@ This is a shared password replayed from client state, not sessions. Adequate for
 - **In-memory state that breaks with more than one instance:** the 3-minute per-address email throttle (`lastSentTimes` in `src/lib/mail/mailUtil.ts`). It silently degrades behind a load balancer — two containers hold two different maps and disagree. This is why `getSettings()` and track availability are deliberately uncached; do not "optimise" either into a second copy of this bug.
 - **The `/admin` open/close toggle saves itself, immediately, on its own PATCH.** Do not fold it back into the sticky save bar. That bar is tab-scoped, so a toggle routed through it gets dropped on the Tracks tab while still reporting a green "Saved" — the banner reads OPEN, the button reads "Open registration", and the public form keeps taking money.
 - The confirmation email is a large inline HTML template literal in `mailUtil.ts`, compiled from `src/lib/mail/mail.mjml`. **`mjml` is not a project dependency** — regenerating means `npx mjml src/lib/mail/mail.mjml` and pasting the result back into the template literal. Keeping the two in sync is manual. Content now comes from `settings.eventConfig`; the template supplies layout only.
-- `/sync`, `/stats` still have their own copy-pasted login forms rather than `AdminGate`.
 - `Dockerfile` does `COPY package.json package-lock.json* ./` + `npm install`, but the repo ships only `pnpm-lock.yaml`. **Docker builds ignore the lockfile entirely and resolve fresh**, so prod dependency versions can drift from local. Left as-is deliberately; fixing it changes deploy behavior.
 - **Dependencies are well behind**: Next 15.5.2 (16 is out), `cashfree-pg` 5 (6 is out), `nodemailer` 7 (9 is out), TypeScript 5 (7 is out). Deliberately not upgraded during the 2026 rework — bumping the payment SDK while rewriting checkout makes failures unattributable.
 

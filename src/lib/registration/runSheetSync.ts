@@ -11,6 +11,7 @@ import {
   type SheetRegistration,
   type SheetRow,
 } from './sheetSync';
+import { displayCollege } from './college';
 
 /**
  * Google Sheets sync — the impure half.
@@ -159,7 +160,11 @@ async function applySync(sheetId: string): Promise<{ message: string; updated: n
     name: reg.name,
     email: reg.email,
     contact: reg.contact,
-    college: reg.college,
+    // The resolved name, not the literal 'Other'. Done here rather than in
+    // sheetSync so that module stays dependency-free — and no new sheet column
+    // is needed, so existing rows do not churn: every current row is NMIMS,
+    // where the resolved value is identical to what is already in the cell.
+    college: displayCollege(reg.college, reg.collegeOther),
     course: reg.course,
     department: reg.department,
     year: reg.year,

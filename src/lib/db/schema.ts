@@ -56,6 +56,16 @@ export const registrations = pgTable('pferegistration', {
   contact: varchar('contact', { length: 20 }).notNull(),
   /** New for 2026 — the program is open to students from other colleges. */
   college: varchar('college', { length: 200 }).notNull().default(''),
+  /**
+   * The typed name, set only when `college` is the literal 'Other'.
+   *
+   * A separate column rather than overwriting `college` with the typed value:
+   * `college` stays categorical, so "NMIMS vs everyone else" is a plain GROUP BY.
+   * Deriving that split from "is this string in settings.fieldOptions.colleges?"
+   * would silently reclassify every historical row the moment an admin renames a
+   * college in the dropdown.
+   */
+  collegeOther: varchar('college_other', { length: 200 }),
   course: varchar('course', { length: 100 }).notNull(),
   department: varchar('department', { length: 100 }).notNull(),
   year: varchar('year', { length: 50 }).notNull(),
@@ -276,6 +286,8 @@ export type FieldLabels = {
   email: FieldText;
   contact: FieldText;
   college: FieldText;
+  /** Shown only when 'Other' is picked in the college dropdown. */
+  collegeOther: FieldText;
   course: FieldText;
   department: FieldText;
   year: FieldText;
@@ -290,6 +302,7 @@ export const DEFAULT_FIELD_LABELS: FieldLabels = {
   email: { label: 'Your Email', placeholder: 'mail@parthg.me' },
   contact: { label: 'Contact Number', placeholder: '9406084060' },
   college: { label: 'College', placeholder: 'Select your option' },
+  collegeOther: { label: 'College Name', placeholder: 'VJTI Mumbai' },
   course: { label: 'Course', placeholder: 'B.Tech', selectPrompt: 'Select your option' },
   department: { label: 'Department', placeholder: 'Computer Science', selectPrompt: 'Select your option' },
   year: { label: 'Current Academic Year', placeholder: 'Select your option' },
