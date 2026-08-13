@@ -1,191 +1,83 @@
 import { NextResponse } from 'next/server';
-import { google } from 'googleapis';
-import { db } from '@/lib/db';
-import { registrations, tracks } from '@/lib/db/schema';
-import { asc } from 'drizzle-orm';
-import { requireAdmin } from '@/lib/auth/requireAdmin';
-import {
-  SHEET_TAB_2026,
-  a1,
-  canonicalHeaderRow,
-  planSheetSync,
-  toCanonicalRow,
-  type SheetRegistration,
-  type SheetRow,
-} from '@/lib/registration/sheetSync';
+import { requireAdmin, hasCronToken } from '@/lib/auth/requireAdmin';
+import { runSheetSync, syncHistory } from '@/lib/registration/runSheetSync';
 
 /**
- * Sync the live 2026 registrations into their own tab.
+ * Trigger a sheet sync, and report on past ones.
  *
- * The 2025 rows live in the tab named `Sheet1` and are no longer in the live
- * table at all (they were archived to `pferegistration_2025`), so diffing them
- * against the DB would treat every one of them as a stray. `Sheet1` is left
- * exactly as it is; 2026 writes to SHEET_TAB_2026 and nowhere else.
- *
- * The diff itself is in lib/registration/sheetSync.ts and is a pure function.
- * This file is only the plumbing: read, plan, apply.
+ * All the work is in `lib/registration/runSheetSync` so the in-process scheduler
+ * can call it without going through HTTP. This file is auth and status codes.
  */
 
-const sheets = google.sheets('v4');
+export const dynamic = 'force-dynamic';
 
-const sheetAuth = new google.auth.JWT({
-  email: process.env.GOOGLE_SHEETS_CLIENT_EMAIL,
-  key: process.env.GOOGLE_SHEETS_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-  scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-});
-
-async function tabExists(spreadsheetId: string): Promise<boolean> {
-  const meta = await sheets.spreadsheets.get({
-    auth: sheetAuth,
-    spreadsheetId,
-    fields: 'sheets.properties.title',
-  });
-  return (meta.data.sheets ?? []).some((s) => s.properties?.title === SHEET_TAB_2026);
+/** Enough to identify a machine caller, short enough to sit in a table cell. */
+function userAgent(request: Request): string {
+  return request.headers.get('user-agent')?.slice(0, 200) || 'unknown';
 }
 
 /**
- * Create the 2026 tab if it is not there yet.
- *
- * The external cron and the manual button on /sync can fire at the same time,
- * and a second `addSheet` for a title that now exists is a 400. Re-check on
- * failure rather than surfacing that as an opaque 500.
+ * A rejected Bearer token would otherwise fall through to the Basic-auth
+ * decoder, which base64-decodes the token, finds no colon in the result and
+ * answers `400 Malformed authorization header`. That reads as "my curl is
+ * wrong" when the real cause is almost always an unset or mismatched
+ * CRON_SECRET — or, as happened here, a server still running an older build
+ * that has no bearer support at all.
  */
-async function ensureTab(spreadsheetId: string): Promise<boolean> {
-  if (await tabExists(spreadsheetId)) return false;
-  try {
-    await sheets.spreadsheets.batchUpdate({
-      auth: sheetAuth,
-      spreadsheetId,
-      requestBody: {
-        requests: [{ addSheet: { properties: { title: SHEET_TAB_2026 } } }],
-      },
-    });
-    return true;
-  } catch (error) {
-    if (await tabExists(spreadsheetId)) return false;
-    throw error;
-  }
+function bearerRejection(request: Request, detail: string): NextResponse | null {
+  if (!request.headers.get('authorization')?.toLowerCase().startsWith('bearer ')) return null;
+  return NextResponse.json({ success: false, message: detail }, { status: 401 });
 }
 
 export async function POST(request: Request) {
-  // --- 1. Authentication & Authorization ---
-  const auth = requireAdmin(request);
-  if (!auth.ok) return auth.response;
+  if (!hasCronToken(request)) {
+    const admin = requireAdmin(request);
+    if (!admin.ok) {
+      // Logged, and that is the entire point of this line. Before it existed a
+      // trigger with a stale password was rejected in complete silence: no
+      // error, no counter, nothing to distinguish "the cron is 401ing" from
+      // "the cron was never firing at all". Deliberately not written to
+      // `sync_runs` — an unauthenticated request must not be able to grow a
+      // table.
+      console.warn('[SYNC] rejected unauthenticated trigger', { userAgent: userAgent(request) });
 
-  // --- 2. Sync Logic ---
-  try {
-    const sheetId = process.env.GOOGLE_SHEETS_SHEET_ID;
-    if (!sheetId) {
-      throw new Error('Missing GOOGLE_SHEETS_SHEET_ID env variable');
+      return (
+        bearerRejection(
+          request,
+          'Bearer token rejected. Check CRON_SECRET is set on the server and matches this token.',
+        ) ?? admin.response
+      );
     }
-
-    // --- Step A: Fetch both sources. The tab has to exist before it can be read.
-    const [createdTab, dbRegistrations, trackRows] = await Promise.all([
-      ensureTab(sheetId),
-      db.select().from(registrations).orderBy(asc(registrations.createdAt)),
-      // Every track, not `trackAvailability()`: that filters on `enabled`, and a
-      // registration can point at a track that has since been switched off.
-      db.select({ id: tracks.id, name: tracks.name }).from(tracks),
-    ]);
-
-    const trackName = new Map(trackRows.map((t) => [t.id, t.name]));
-
-    const rows: SheetRegistration[] = dbRegistrations.map((reg) => ({
-      createdAt: reg.createdAt,
-      name: reg.name,
-      email: reg.email,
-      contact: reg.contact,
-      college: reg.college,
-      course: reg.course,
-      department: reg.department,
-      year: reg.year,
-      sku: reg.sku,
-      beginnerTrackName: reg.beginnerTrackId ? trackName.get(reg.beginnerTrackId) ?? '' : null,
-      advancedTrackName: reg.advancedTrackId ? trackName.get(reg.advancedTrackId) ?? '' : null,
-      hasCapstone: reg.hasCapstone,
-      amountPaid: reg.amountPaid,
-      paymentStatus: reg.paymentStatus,
-      orderId: reg.orderId,
-      referral: reg.referral,
-    }));
-
-    const sheetResponse = await sheets.spreadsheets.values.get({
-      auth: sheetAuth,
-      spreadsheetId: sheetId,
-      range: a1(SHEET_TAB_2026),
-    });
-    const sheetValues = (sheetResponse.data.values || []) as SheetRow[];
-
-    // --- Step B: Empty tab (freshly created, or emptied by hand) — stamp the
-    // canonical header and everything under it. Note this is `=== 0`: a tab
-    // holding only a header row must go down the normal diff path instead.
-    if (sheetValues.length === 0) {
-      const created = createdTab ? `Created the '${SHEET_TAB_2026}' tab. ` : '';
-      if (rows.length === 0) {
-        return NextResponse.json({
-          success: true,
-          message: `${created}No database records to sync to the empty '${SHEET_TAB_2026}' tab.`,
-        });
-      }
-      await sheets.spreadsheets.values.update({
-        auth: sheetAuth,
-        spreadsheetId: sheetId,
-        range: a1(SHEET_TAB_2026, 'A1'),
-        valueInputOption: 'RAW',
-        requestBody: { values: [canonicalHeaderRow(), ...rows.map(toCanonicalRow)] },
-      });
-      return NextResponse.json({
-        success: true,
-        message: `${created}Initial sync to '${SHEET_TAB_2026}' complete. Added ${rows.length} records.`,
-      });
-    }
-
-    // --- Step C: Diff. Pure — no API calls happen in here.
-    const plan = planSheetSync(sheetValues, rows);
-
-    // --- Step D: Apply. Batch update the changed rows, then append the new ones.
-    if (plan.updates.length > 0) {
-      console.log(`[SYNC] Updating ${plan.updates.length} records...`);
-      await sheets.spreadsheets.values.batchUpdate({
-        auth: sheetAuth,
-        spreadsheetId: sheetId,
-        requestBody: {
-          valueInputOption: 'RAW',
-          data: plan.updates.map((u) => ({
-            range: a1(SHEET_TAB_2026, `A${u.rowIndex}`),
-            values: [u.values],
-          })),
-        },
-      });
-    }
-
-    if (plan.appends.length > 0) {
-      console.log(`[SYNC] Appending ${plan.appends.length} new records...`);
-      await sheets.spreadsheets.values.append({
-        auth: sheetAuth,
-        spreadsheetId: sheetId,
-        range: a1(SHEET_TAB_2026, 'A1'),
-        valueInputOption: 'RAW',
-        requestBody: { values: plan.appends },
-      });
-    }
-
-    const notes: string[] = [];
-    if (createdTab) notes.push(`Created the '${SHEET_TAB_2026}' tab.`);
-    if (plan.missingHeaders.length > 0) {
-      // Not auto-added: inserting a column would shift every cell to its right.
-      notes.push(`Skipped columns missing from the sheet: ${plan.missingHeaders.join(', ')}.`);
-    }
-
-    const message = [
-      `Sync complete. Updated: ${plan.updates.length}. Appended: ${plan.appends.length}.`,
-      ...notes,
-    ].join(' ');
-    return NextResponse.json({ success: true, message });
-
-  } catch (error) {
-    console.error('[SYNC ERROR]', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown sync error occurred';
-    return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
   }
+
+  const result = await runSheetSync('http', userAgent(request));
+
+  if (!result.ok) {
+    return NextResponse.json({ success: false, error: result.message }, { status: 500 });
+  }
+
+  return NextResponse.json({
+    success: true,
+    message: result.message,
+    skipped: result.skipped,
+  });
+}
+
+/**
+ * Recent runs, for the panel on /sync and the staleness banner on /admin.
+ *
+ * Admin only — the run log names the User-Agent of every caller, and a bearer
+ * token is for firing the sync, not for reading who else has been firing it.
+ */
+export async function GET(request: Request) {
+  const auth = requireAdmin(request);
+  if (!auth.ok) {
+    return (
+      bearerRejection(request, 'Reading the run log needs admin credentials, not CRON_SECRET.') ??
+      auth.response
+    );
+  }
+
+  const history = await syncHistory();
+  return NextResponse.json({ success: true, ...history });
 }

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import AdminGate, { clearStoredCreds } from '@/components/admin/AdminGate';
+import { SyncStaleBanner, useSyncHistory } from '@/components/admin/SyncStatus';
 import { TracksTab, useTracksEditor } from '@/components/admin/TracksTab';
 import { CouponsTab, useCouponsEditor } from '@/components/admin/CouponsTab';
 import type { EventConfig, FieldOptions, FieldLabels, FieldText, Settings } from '@/lib/db/schema';
@@ -241,6 +242,8 @@ function Panel({ creds, logout }: { creds: string; logout: () => void }) {
 
   const tracksEditor = useTracksEditor(creds, tab === 'tracks');
   const couponsEditor = useCouponsEditor(creds, tab === 'coupons');
+  // Not tab-scoped: a dead sheet sync is worth knowing about from any tab.
+  const syncStatus = useSyncHistory(creds);
 
   const load = useCallback(async () => {
     try {
@@ -470,6 +473,8 @@ function Panel({ creds, logout }: { creds: string; logout: () => void }) {
                 : 'Open registration'}
           </button>
         </section>
+
+        <SyncStaleBanner lastSuccessAt={syncStatus.lastSuccessAt} loaded={syncStatus.loaded} />
 
         {/* Scrolls sideways inside itself on a narrow screen rather than wrapping
             into three ragged rows. The page itself never scrolls horizontally. */}

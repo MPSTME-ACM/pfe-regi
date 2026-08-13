@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import AdminGate, { clearStoredCreds } from '@/components/admin/AdminGate';
 import BackToAdmin from '@/components/admin/BackToAdmin';
+import { SyncRunLog, relativeTime, useSyncHistory } from '@/components/admin/SyncStatus';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Manual Google Sheets sync.
@@ -31,6 +32,7 @@ type Status =
 function SyncPanel({ creds, logout }: { creds: string; logout: () => void }) {
   const [isLoading, setIsLoading] = useState(false);
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
+  const history = useSyncHistory(creds);
 
   const handleSync = async () => {
     setIsLoading(true);
@@ -61,6 +63,9 @@ function SyncPanel({ creds, logout }: { creds: string; logout: () => void }) {
           at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         });
       }
+
+      // Whatever happened, the run log has a new row worth showing.
+      history.refresh();
     } catch (error: unknown) {
       setStatus({
         kind: 'error',
@@ -92,7 +97,13 @@ function SyncPanel({ creds, logout }: { creds: string; logout: () => void }) {
         <section className="rounded-2xl border border-hairline bg-panel-raised p-5 sm:p-7">
           <h2 className="text-base font-semibold text-accent-soft">Google Sheets</h2>
           <p className="mt-2 max-w-prose text-sm leading-relaxed text-gray-300">
-            Click the button below to sync all registrations to your connected Google Sheet.
+            The sheet syncs on its own every few minutes. This button forces one now — it
+            is not the only thing keeping the sheet up to date.
+          </p>
+          <p className="mt-2 text-sm text-gray-400">
+            Last successful sync: <span className="text-gray-200">
+              {history.loaded ? relativeTime(history.lastSuccessAt) : '…'}
+            </span>
           </p>
 
           <button
@@ -136,6 +147,25 @@ function SyncPanel({ creds, logout }: { creds: string; logout: () => void }) {
                 </button>
               </div>
             )}
+          </div>
+        </section>
+
+        {/* The reason this panel exists: when the sync stopped in August 2026 it
+            failed silently for two days. A run that 401s or 500s now leaves a
+            visible row here instead of only a line in container logs nobody
+            reads. The source tag also names any external trigger still alive. */}
+        <section className="mt-5 rounded-2xl border border-hairline bg-panel-raised p-5 sm:p-7">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <h2 className="text-base font-semibold text-accent-soft">Recent runs</h2>
+            <button
+              onClick={history.refresh}
+              className="text-sm text-gray-400 underline underline-offset-2 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-soft"
+            >
+              Refresh
+            </button>
+          </div>
+          <div className="mt-3">
+            <SyncRunLog runs={history.runs} loaded={history.loaded} />
           </div>
         </section>
       </div>

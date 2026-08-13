@@ -119,3 +119,32 @@ export function requireAdmin(request: Request): AuthResult {
 export function requireMember(request: Request): AuthResult {
   return checkBasic(request, 'acm', process.env.MEMBER_PASSWORD || '');
 }
+
+/**
+ * `Authorization: Bearer <CRON_SECRET>`, for machine triggers.
+ *
+ * A cron holding the shared ADMIN_PASSWORD breaks silently the moment that
+ * password is rotated — which is the leading explanation for the sheet sync
+ * going quiet for two days in August 2026. A dedicated secret means rotating
+ * the admin password cannot take the sync down with it.
+ *
+ * Returns a plain boolean rather than an AuthResult: callers combine it with
+ * `requireAdmin` and choose their own response.
+ */
+export function hasCronToken(request: Request): boolean {
+  // Fail closed when unset, matching checkBasic.
+  const expectedSecret = process.env.CRON_SECRET || '';
+  if (!expectedSecret) return false;
+
+  const authHeader = request.headers.get('authorization');
+  if (!authHeader) return false;
+
+  const parts = authHeader.split(' ');
+  if (parts.length !== 2 || parts[0].toLowerCase() !== 'bearer') return false;
+
+  // Byte lengths, not string lengths — timingSafeEqual throws RangeError on
+  // unequal buffers, which would turn a wrong token into a 500. See checkBasic.
+  const given = Buffer.from(parts[1], 'utf-8');
+  const expected = Buffer.from(expectedSecret, 'utf-8');
+  return given.length === expected.length && timingSafeEqual(given, expected);
+}

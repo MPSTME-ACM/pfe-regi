@@ -339,3 +339,68 @@ export const settings = pgTable('settings', {
 }));
 
 export type Settings = typeof settings.$inferSelect;
+
+// ─── sheet sync ──────────────────────────────────────────────────────────────
+// Two tables, because they answer two different questions.
+//
+// The sync used to be fired by a cron configured outside this repository, and in
+// August 2026 it stopped without anyone noticing for two days: `requireAdmin`
+// returns 401 with no log line, so a trigger holding a stale password failed in
+// complete silence. Nothing in the product recorded that a sync had ever run.
+
+/** Where a sync run came from. `schedule` is the in-process timer. */
+export const syncSourceEnum = pgEnum('sync_source_enum', ['schedule', 'http']);
+
+/**
+ * The lease. A singleton, claimed with a single atomic UPDATE.
+ *
+ * This exists because we cannot know how many triggers are live — the original
+ * external cron may still be out there. Two runs computing `appends` from the
+ * same pre-append sheet would each append the same rows, duplicating
+ * registrations in the spreadsheet.
+ *
+ * Deliberately not a pg advisory lock: over a connection *pool* the unlock can
+ * land on a different connection than the lock, leaking the lease for the life
+ * of that session, and the transaction-scoped variant would hold a transaction
+ * open across the Google API calls — the same thing `create-order` is careful
+ * not to do around Cashfree.
+ */
+export const syncState = pgTable('sync_state', {
+  id: integer('id').primaryKey().default(1),
+  running: boolean('running').notNull().default(false),
+  /** When the current holder claimed it. Also the staleness clock: a run that
+   *  died mid-flight is reclaimed rather than blocking every later run. */
+  startedAt: timestamp('started_at'),
+  source: syncSourceEnum('source'),
+},
+(table) => ({
+  singleton: check('sync_state_singleton', sql`${table.id} = 1`),
+}));
+
+/**
+ * One row per attempt.
+ *
+ * A single `lastSyncedAt` column cannot tell "fired forty times and 401'd" from
+ * "never fired once", which is exactly the question nobody could answer when
+ * this broke. `source` plus `triggerNote` also identify the mystery cron: if
+ * something external is still alive it shows up as an `http` run carrying a
+ * curl-shaped User-Agent.
+ */
+export const syncRuns = pgTable('sync_runs', {
+  id: serial('id').primaryKey(),
+  source: syncSourceEnum('source').notNull(),
+  /** Truncated User-Agent, for `http` runs only. Null for the timer. */
+  triggerNote: text('trigger_note'),
+  startedAt: timestamp('started_at').defaultNow().notNull(),
+  finishedAt: timestamp('finished_at'),
+  ok: boolean('ok').notNull().default(false),
+  updated: integer('updated').notNull().default(0),
+  appended: integer('appended').notNull().default(0),
+  /** The message, so /sync can show it without anyone reading container logs. */
+  error: text('error'),
+},
+(table) => ({
+  startedIdx: index('sync_run_started_idx').on(table.startedAt),
+}));
+
+export type SyncRun = typeof syncRuns.$inferSelect;

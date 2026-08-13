@@ -7,12 +7,18 @@
  * `SheetRegistration` and turns the plan into Sheets API calls; nothing in this
  * file knows the API exists.
  *
- * 2025 lives in the tab literally named `Sheet1` and is never touched again —
- * those rows are archived out of the live table, so a diff against 2026 data
- * would try to delete or rewrite all of them. 2026 gets its own tab.
+ * 2026 gets its own named tab and the sync writes to that tab and nothing else.
+ * The 2025 rows are archived out of the live table, so a diff would treat every
+ * one of them as a stray and try to delete or rewrite it — hence the hard
+ * scoping rather than "whichever sheet is first".
+ *
+ * Historically that meant leaving a `Sheet1` alone in the same spreadsheet. The
+ * spreadsheet now configured ("PFE Registrations 2026-27") has no `Sheet1` at
+ * all — the 2025 record lives in a separate file — but the scoping still earns
+ * its keep the moment anyone adds a tab of their own here.
  */
 
-/** The 2026 tab. `Sheet1` is the frozen 2025 record and is never written to. */
+/** The only tab this sync ever writes to. */
 export const SHEET_TAB_2026 = 'PFE2026';
 
 /** The column the diff is keyed on. Looked up BY NAME, never by index. */

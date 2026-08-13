@@ -100,7 +100,20 @@ The webhook needs the **raw unparsed body** for signature verification — `getR
 
 ### Google Sheets sync
 
-`api/sync-sheet` diffs the live table against the **`PFE2026`** tab, keyed on the `Order ID` column looked up **by header name, not index**, then batch-updates changed rows and appends new ones. The diff logic is a pure function in `src/lib/registration/sheetSync.ts`. `Sheet1` is the frozen 2025 record and is never written to. Triggered manually from `/sync`, and by an external cron — which is why the Dockerfile installs `curl` ("Need this for Sync Job").
+`api/sync-sheet` diffs the live table against the **`PFE2026`** tab, keyed on the `Order ID` column looked up **by header name, not index**, then batch-updates changed rows and appends new ones. The diff logic is a pure function in `src/lib/registration/sheetSync.ts`; the Google calls and bookkeeping are in `src/lib/registration/runSheetSync.ts`. Nothing writes to any other tab.
+
+**The app triggers its own sync.** `src/instrumentation.ts` runs one 30 seconds after boot and every `SYNC_INTERVAL_MINUTES` (default 10) after that, calling `runSheetSync()` **directly** — no HTTP hop, no Basic auth, no `SITE_URL`. `/sync` still has a manual button, and `POST /api/sync-sheet` still accepts admin Basic auth or `Authorization: Bearer $CRON_SECRET`.
+
+This replaced a cron configured outside the repo. In August 2026 that cron stopped and **nobody noticed for two days**: registrations kept succeeding, the spreadsheet just quietly stopped growing. Two things made it invisible, and both are now fixed —
+
+- `requireAdmin` rejects with a 401 and **no log line**, so a trigger holding a rotated `ADMIN_PASSWORD` failed in total silence. The route logs the rejection now (with the User-Agent), and `CRON_SECRET` exists so rotating the admin password cannot kill the sync.
+- Nothing recorded that a sync had ever run. Every attempt now writes a `sync_runs` row (source, User-Agent, counts, error), shown on `/sync` and surfaced as a staleness banner on `/admin` when the last success is over 20 minutes old. A `lastSyncedAt` column would not have been enough — it cannot distinguish "fired forty times and 401'd" from "never fired".
+
+**Runs are serialised by a lease row in `sync_state`**, claimed with a single atomic `UPDATE ... WHERE running = false OR started_at < now() - 10 min`. This matters because the number of live triggers is unknown — the original cron may still be out there. Two concurrent runs would each compute `appends` from the same pre-append sheet and **both append the same rows**. Deliberately not a pg advisory lock: over a connection pool the unlock can land on a different connection than the lock, and the transaction-scoped variant would hold a transaction open across the Google calls. The lease is released in a `finally` and self-heals after 10 minutes if a process dies holding it.
+
+The in-process timer is a deliberate exception to the "no in-memory state" rule below. `lastSentTimes` is *incorrect* with two instances because each holds a divergent copy of authoritative state; the timer holds no state, and its only effect is calling an idempotent function guarded by a DB lease. Two instances mean two ticks and the second is skipped.
+
+The Dockerfile still installs `curl` — the healthcheck uses it.
 
 ## Referral attribution
 
