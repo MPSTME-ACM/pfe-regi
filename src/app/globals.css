@@ -129,3 +129,31 @@ body {
 .animate-gradient-xy {
     animation: gradient-xy 15s ease infinite;
 }
+
+/* Registration-form intro (ACM -> PFE pixel reveal). --highlight is set
+ * per-cell inline by PixelGrid.tsx. Timed faster than the ACM merch site's
+ * source animation (0.4s vs 0.6s) since this runs twice back-to-back. */
+@keyframes intro-reveal {
+  0% { background-color: transparent; }
+  100% { background-color: var(--highlight); }
+}
+.animate-intro-reveal {
+  animation: intro-reveal 0.4s ease forwards;
+}
+
+/* Faint pink tint so unlit cells read as part of the grid, not empty gaps. */
+:root {
+  --intro-cell-bg: color-mix(in oklab, var(--color-accent-soft) 6%, var(--color-panel));
+}
+.bg-intro-cell {
+  background-color: var(--intro-cell-bg);
+}
+
+@keyframes intro-flash {
+  0% { background-color: var(--intro-cell-bg); }
+  50% { background-color: var(--highlight); }
+  100% { background-color: var(--intro-cell-bg); }
+}
+.animate-intro-flash {
+  animation: intro-flash 0.4s ease forwards;
+}

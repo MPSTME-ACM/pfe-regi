@@ -2,6 +2,7 @@ import { getSettings, formatPaise } from '@/lib/settings';
 import { trackAvailability } from '@/lib/registration/capacity';
 import ClosedNotice from './_components/ClosedNotice';
 import RegistrationForm from './_components/RegistrationForm';
+import { IntroSequence } from './_components/intro/IntroSequence';
 import type { TrackOption } from './_components/registrationTypes';
 import { findReferrer, referralCookieCode } from '@/lib/registration/referral';
 
@@ -50,11 +51,13 @@ export default async function Home() {
 
   if (!settings.registrationOpen) {
     return (
-      <ClosedNotice
-        title={settings.closedTitle}
-        body={settings.closedBody}
-        eventConfig={settings.eventConfig}
-      />
+      <IntroSequence>
+        <ClosedNotice
+          title={settings.closedTitle}
+          body={settings.closedBody}
+          eventConfig={settings.eventConfig}
+        />
+      </IntroSequence>
     );
   }
 
@@ -83,16 +86,18 @@ export default async function Home() {
   // for a live leak. Worth keeping as the table grows: only what a prop names
   // should ever be able to reach the browser.
   return (
-    <RegistrationForm
-      eventConfig={{ ...settings.eventConfig }}
-      fieldOptions={{ ...settings.fieldOptions }}
-      fieldLabels={{ ...settings.fieldLabels }}
-      referredBy={referredBy}
-      tracks={tracks}
-      priceLabels={priceLabels}
-      cashfreeMode={process.env.CASHFREE_ENV === 'PRODUCTION' ? 'production' : 'sandbox'}
-      merchantName={process.env.NEXT_PUBLIC_MERCHANT_NAME || 'ACM MPSTME'}
-      merchantEmail={settings.eventConfig.contactEmail}
-    />
+    <IntroSequence>
+      <RegistrationForm
+        eventConfig={{ ...settings.eventConfig }}
+        fieldOptions={{ ...settings.fieldOptions }}
+        fieldLabels={{ ...settings.fieldLabels }}
+        referredBy={referredBy}
+        tracks={tracks}
+        priceLabels={priceLabels}
+        cashfreeMode={process.env.CASHFREE_ENV === 'PRODUCTION' ? 'production' : 'sandbox'}
+        merchantName={process.env.NEXT_PUBLIC_MERCHANT_NAME || 'ACM MPSTME'}
+        merchantEmail={settings.eventConfig.contactEmail}
+      />
+    </IntroSequence>
   );
 }
