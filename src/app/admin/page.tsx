@@ -6,6 +6,10 @@ import AdminGate, { clearStoredCreds } from '@/components/admin/AdminGate';
 import { SyncStaleBanner, useSyncHistory } from '@/components/admin/SyncStatus';
 import { TracksTab, useTracksEditor } from '@/components/admin/TracksTab';
 import { CouponsTab, useCouponsEditor } from '@/components/admin/CouponsTab';
+import {
+  EditRegistrationTab,
+  useEditRegistration,
+} from '@/components/admin/EditRegistrationTab';
 import type { EventConfig, FieldOptions, FieldLabels, FieldText, Settings } from '@/lib/db/schema';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -28,7 +32,7 @@ import type { EventConfig, FieldOptions, FieldLabels, FieldText, Settings } from
 // holding whichever editor is open.
 // ─────────────────────────────────────────────────────────────────────────────
 
-type TabId = 'registration' | 'pricing' | 'event' | 'fields' | 'tracks' | 'coupons';
+type TabId = 'registration' | 'pricing' | 'event' | 'fields' | 'tracks' | 'coupons' | 'edit';
 
 const TABS: { id: TabId; label: string; phase?: string }[] = [
   { id: 'registration', label: 'Registration' },
@@ -37,6 +41,7 @@ const TABS: { id: TabId; label: string; phase?: string }[] = [
   { id: 'fields', label: 'Form fields' },
   { id: 'tracks', label: 'Tracks' },
   { id: 'coupons', label: 'Coupons' },
+  { id: 'edit', label: 'Edit registration' },
 ];
 
 const input =
@@ -242,6 +247,7 @@ function Panel({ creds, logout }: { creds: string; logout: () => void }) {
 
   const tracksEditor = useTracksEditor(creds, tab === 'tracks');
   const couponsEditor = useCouponsEditor(creds, tab === 'coupons');
+  const editEditor = useEditRegistration(creds);
   // Not tab-scoped: a dead sheet sync is worth knowing about from any tab.
   const syncStatus = useSyncHistory(creds);
 
@@ -348,13 +354,18 @@ function Panel({ creds, logout }: { creds: string; logout: () => void }) {
    * what it does.
    */
   const onCoupons = tab === 'coupons';
+  const onEdit = tab === 'edit';
+  const onTracksTab = tab === 'tracks';
 
   // Otherwise the save bar belongs to whichever editor the current tab owns.
-  const onTracks = tab === 'tracks';
-  const barDirty = onTracks ? tracksEditor.dirty : settingsDirty;
-  const barStatus = onTracks ? tracksEditor.status : status;
-  const barSave = onTracks ? tracksEditor.save : saveSettings;
-  const barDiscard = onTracks
+  // Coupons and Edit-registration apply every write on its own request, so the
+  // bar must NEVER own them: barDirty/barStatus stay neutralised on those tabs
+  // and only the pendingElsewhere warning can make the bar appear.
+  const barOwned = onTracksTab || !(onCoupons || onEdit);
+  const barDirty = onTracksTab ? tracksEditor.dirty : barOwned && settingsDirty;
+  const barStatus = onTracksTab ? tracksEditor.status : barOwned ? status : { kind: 'idle' as const };
+  const barSave = onTracksTab ? tracksEditor.save : saveSettings;
+  const barDiscard = onTracksTab
     ? tracksEditor.discard
     : () => {
       setDraft(settings);
@@ -362,17 +373,17 @@ function Panel({ creds, logout }: { creds: string; logout: () => void }) {
     };
   // Edits on a tab you are not looking at are still pending. Say so — the
   // alternative is an admin who saves prices and assumes their capacity change
-  // went with it. On Coupons neither other editor is the bar's, so both can be
-  // outstanding simultaneously and both need naming.
+  // went with it. On Coupons and Edit-registration neither other editor is the
+  // bar's, so both can be outstanding simultaneously and both need naming.
   const pendingElsewhere = [
-    !onTracks && tracksEditor.dirty ? 'the Tracks tab' : null,
-    onTracks || onCoupons ? (settingsDirty ? 'the settings tabs' : null) : null,
+    !onTracksTab && tracksEditor.dirty ? 'the Tracks tab' : null,
+    onTracksTab || onCoupons || onEdit ? (settingsDirty ? 'the settings tabs' : null) : null,
   ].filter((s): s is string => s !== null);
 
   // The bar earns its space or it does not appear.
   const showBar =
     pendingElsewhere.length > 0 ||
-    (!onCoupons && (barDirty || barStatus.kind === 'saving' || barStatus.kind === 'ok' || barStatus.kind === 'error'));
+    (barOwned && (barDirty || barStatus.kind === 'saving' || barStatus.kind === 'ok' || barStatus.kind === 'error'));
 
   const patch = (p: Partial<Settings>) => setDraft((d) => (d ? { ...d, ...p } : d));
   const patchEvent = (p: Partial<EventConfig>) =>
@@ -670,6 +681,8 @@ function Panel({ creds, logout }: { creds: string; logout: () => void }) {
           {tab === 'tracks' && <TracksTab editor={tracksEditor} />}
 
           {tab === 'coupons' && <CouponsTab editor={couponsEditor} />}
+
+          {tab === 'edit' && <EditRegistrationTab editor={editEditor} />}
         </div>
 
         {/* Appears only when there is something to do or report.
@@ -683,14 +696,14 @@ function Panel({ creds, logout }: { creds: string; logout: () => void }) {
         {showBar && (
           <div className="sticky bottom-4 z-10 mt-8 mb-8 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 rounded-xl border border-hairline bg-panel-raised/95 px-4 py-3 shadow-lg shadow-black/40 backdrop-blur">
             <div className="flex items-center gap-1">
-              {!onCoupons && barDirty && (
+              {barOwned && barDirty && (
                 <>
                   <button
                     onClick={barSave}
                     disabled={barStatus.kind === 'saving'}
                     className="inline-flex min-h-[44px] items-center justify-center rounded-lg bg-accent-deep px-5 font-semibold text-white transition-[background-color,box-shadow,transform,opacity] duration-200 ease-out hover:bg-accent-deep/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-soft active:scale-[0.99] disabled:opacity-60 disabled:active:scale-100"
                   >
-                    {barStatus.kind === 'saving' ? 'Saving…' : onTracks ? 'Save tracks' : 'Save changes'}
+                    {barStatus.kind === 'saving' ? 'Saving…' : onTracksTab ? 'Save tracks' : 'Save changes'}
                   </button>
                   <button
                     onClick={barDiscard}
@@ -700,13 +713,13 @@ function Panel({ creds, logout }: { creds: string; logout: () => void }) {
                   </button>
                 </>
               )}
-              {!onCoupons && !barDirty && barStatus.kind === 'ok' && (
+              {barOwned && !barDirty && barStatus.kind === 'ok' && (
                 <span className="inline-flex items-center gap-2 px-1 text-sm font-medium text-emerald-300">
                   <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                   Saved
                 </span>
               )}
-              {!onCoupons && barStatus.kind === 'error' && (
+              {barOwned && barStatus.kind === 'error' && (
                 <span className="px-1 text-sm text-red-300">{barStatus.message}</span>
               )}
             </div>

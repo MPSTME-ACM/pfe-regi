@@ -192,6 +192,10 @@ export async function trackAvailability() {
       name: t.name,
       segment: t.segment,
       dates: t.dates,
+      capacity: t.capacity,
+      /** Seats currently occupied, pending holds included — the same number `full` is computed from. */
+      used,
+      remaining: Math.max(0, t.capacity - used),
       full: used >= t.capacity,
     };
   });
