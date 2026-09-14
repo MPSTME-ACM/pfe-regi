@@ -18,6 +18,7 @@ interface RegistrationDetails {
     name: string;
     description: string;
     sku: string | null;
+    hasCapstone: boolean;
     course: string | null;
     year: string | null;
     orderId: string;
@@ -38,6 +39,13 @@ const SKU_LABEL: Record<string, string> = {
     single: "One Track",
     bundle: "Full Bundle",
 };
+
+/** The SKU is not the whole story: a single track may carry the capstone day. */
+function skuLabel(sku: string | null, hasCapstone: boolean): string | null {
+    if (!sku) return null;
+    if (sku === "single" && hasCapstone) return "One Track + Capstone Day";
+    return SKU_LABEL[sku] ?? null;
+}
 
 // --- Icons -------------------------------------------------------------------
 // Status is never carried by colour alone: every state pairs its hue with one of
@@ -365,9 +373,9 @@ const StatusDisplay = () => {
                                     </p>
 
                                     <div className="mt-3.5 flex flex-wrap items-center justify-center gap-2">
-                                        {details.sku && SKU_LABEL[details.sku] && (
+                                        {skuLabel(details.sku, details.hasCapstone) && (
                                             <span className="rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-xs font-semibold text-accent-soft">
-                                                {SKU_LABEL[details.sku]}
+                                                {skuLabel(details.sku, details.hasCapstone)}
                                             </span>
                                         )}
                                         {details.edition === 2025 && (

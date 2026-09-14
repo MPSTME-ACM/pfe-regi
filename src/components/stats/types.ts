@@ -16,7 +16,8 @@ export interface StatsResponse {
   revenuePaise: number;
   /** Seats per track. A bundle occupies three, so these sum past `total`. */
   domains: Record<string, number>;
-  skus: { capstone: number; single: number; bundle: number };
+  /** `single` splits on the capstone add-on — the SKU alone does not distinguish them. */
+  skus: { capstone: number; single: number; singleCapstone: number; bundle: number };
   combos: {
     beginner: string | null;
     advanced: string | null;

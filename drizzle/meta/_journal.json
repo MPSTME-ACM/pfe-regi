@@ -92,6 +92,13 @@
       "when": 1786611593403,
       "tag": "0012_add_college_other",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1789382857729,
+      "tag": "0013_add_price_single_capstone",
+      "breakpoints": true
     }
   ]
 }

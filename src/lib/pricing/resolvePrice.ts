@@ -68,12 +68,19 @@ export interface Prices {
   /** All in paise. Comes from the `settings` singleton. */
   capstone: number;
   single: number;
+  /** One track with the capstone day added on. Priced independently of the parts. */
+  singleCapstone: number;
   bundle: number;
 }
 
 export interface PriceInput {
   sku: Sku;
   prices: Prices;
+  /**
+   * The capstone day added to a single track. Only `single` reads it — the other
+   * two SKUs already settle the question, so it is ignored there.
+   */
+  includeCapstone?: boolean;
   /** Null when no code was entered, or when the entered code did not exist. */
   coupon?: Coupon | null;
   /** Redemptions of this coupon already burned across everyone. */
@@ -103,12 +110,12 @@ export function normaliseCode(code: string): string {
   return code.trim().toUpperCase();
 }
 
-function basePriceFor(sku: Sku, prices: Prices): number {
+function basePriceFor(sku: Sku, prices: Prices, includeCapstone: boolean): number {
   switch (sku) {
     case 'capstone':
       return prices.capstone;
     case 'single':
-      return prices.single;
+      return includeCapstone ? prices.singleCapstone : prices.single;
     case 'bundle':
       return prices.bundle;
   }
@@ -185,7 +192,9 @@ function discountFor(coupon: Coupon, base: number): number {
 }
 
 export function resolvePrice(input: PriceInput): PriceResult {
-  const base = basePriceFor(input.sku, input.prices);
+  // Strict === true: anything else means no capstone, so a malformed flag can
+  // never quietly bill someone for a day they did not ask for.
+  const base = basePriceFor(input.sku, input.prices, input.includeCapstone === true);
 
   if (!input.coupon) {
     return { base, discount: 0, amount: base, couponApplied: false, rejection: null };

@@ -27,6 +27,7 @@ function publicDetails(view: TicketView) {
     name: view.name,
     description: view.description,
     sku: view.sku,
+    hasCapstone: view.hasCapstone,
     course: view.course,
     year: view.year,
     orderId: view.orderId,

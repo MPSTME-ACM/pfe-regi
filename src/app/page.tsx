@@ -72,6 +72,10 @@ export default async function Home() {
     bundle: formatPaise(settings.priceBundle),
   };
 
+  // What the capstone checkbox advertises. Derived rather than written down, so
+  // the two independently-editable prices cannot disagree with the label.
+  const capstoneAddOn = settings.priceSingleCapstone - settings.priceSingle;
+
   const tracks = await safeTrackAvailability();
 
   // Who the /r/<CODE> cookie credits, if anyone. Resolved here so the form can
@@ -94,6 +98,8 @@ export default async function Home() {
         referredBy={referredBy}
         tracks={tracks}
         priceLabels={priceLabels}
+        singleCapstoneLabel={formatPaise(settings.priceSingleCapstone)}
+        capstoneAddOnLabel={capstoneAddOn > 0 ? `+${formatPaise(capstoneAddOn)}` : ''}
         cashfreeMode={process.env.CASHFREE_ENV === 'PRODUCTION' ? 'production' : 'sandbox'}
         merchantName={process.env.NEXT_PUBLIC_MERCHANT_NAME || 'ACM MPSTME'}
         merchantEmail={settings.eventConfig.contactEmail}

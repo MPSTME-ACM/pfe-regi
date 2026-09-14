@@ -62,12 +62,17 @@ export const SKUS: Sku[] = ['capstone', 'single', 'bundle'];
  * disagree about what a bundle contains. `capstone` must NOT carry tracks and
  * `bundle` must carry both — accepting a mismatched payload would let someone
  * pay the bundle price and silently receive no seats.
+ *
+ * `single` may optionally add the capstone day via `includeCapstone`. That is an
+ * add-on, not a SKU: the row still stores sku='single' and carries it in
+ * `has_capstone`, which is what every downstream reader already keys on.
  */
 export function resolveSelection(
   sku: Sku,
   beginnerSlug: string | null | undefined,
   advancedSlug: string | null | undefined,
   bySlug: Map<string, Track>,
+  includeCapstone = false,
 ): TrackSelection | string {
   const capstoneTrack = bySlug.get(CAPSTONE_SLUG) ?? null;
 
@@ -83,11 +88,12 @@ export function resolveSelection(
     if (!slug) return 'Choose a track';
     const track = bySlug.get(slug);
     if (!track?.enabled || track.segment === 'capstone') return 'That track is not available';
+    if (includeCapstone && !capstoneTrack?.enabled) return 'The capstone day is not available';
     return {
       sku,
       beginnerTrack: track.segment === 'beginner' ? track : null,
       advancedTrack: track.segment === 'advanced' ? track : null,
-      capstoneTrack: null,
+      capstoneTrack: includeCapstone ? capstoneTrack : null,
     };
   }
 

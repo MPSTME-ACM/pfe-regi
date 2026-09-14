@@ -40,6 +40,8 @@ interface Body {
   /** Track slugs, not ids — ids are an implementation detail the form should not carry. */
   beginnerTrack?: string | null;
   advancedTrack?: string | null;
+  /** `single` only: add the capstone day. Coerced strictly; see resolvePrice. */
+  includeCapstone?: boolean;
   /** Free-text attribution, kept alongside the resolved referrerId. */
   referral?: string | null;
   /** One code per order. There is no stacking, by decision. */
@@ -89,7 +91,13 @@ export async function POST(request: Request) {
     const found = await db.select().from(tracks).where(inArray(tracks.slug, wanted));
     const bySlug = new Map(found.map((t) => [t.slug, t]));
 
-    const selection = resolveSelection(body.sku!, body.beginnerTrack, body.advancedTrack, bySlug);
+    const selection = resolveSelection(
+      body.sku!,
+      body.beginnerTrack,
+      body.advancedTrack,
+      bySlug,
+      body.includeCapstone === true,
+    );
     if (typeof selection === 'string') return bad(selection, 'INVALID_SELECTION');
 
     // Resolve the code before opening the transaction so an unknown one fails
@@ -112,6 +120,7 @@ export async function POST(request: Request) {
     const prices = {
       capstone: settings.priceCapstone,
       single: settings.priceSingle,
+      singleCapstone: settings.priceSingleCapstone,
       bundle: settings.priceBundle,
     };
 
@@ -157,9 +166,13 @@ export async function POST(request: Request) {
 
       // The ONLY place an amount is decided. The browser sent none and could
       // not have; whatever it displayed is cosmetic.
+      // Taken from the resolved selection, not from the body: the flag that sets
+      // the price is then literally the one that reserves the seat below, so the
+      // two cannot disagree about what was bought.
       const price = resolvePrice({
         sku: selection.sku,
         prices,
+        includeCapstone: selection.capstoneTrack !== null,
         coupon,
         couponUses: usage.total,
         couponUsesByPerson: usage.byPerson,

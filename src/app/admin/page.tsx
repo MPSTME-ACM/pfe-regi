@@ -281,6 +281,7 @@ function Panel({ creds, logout }: { creds: string; logout: () => void }) {
           closedBody: draft.closedBody,
           priceCapstone: draft.priceCapstone,
           priceSingle: draft.priceSingle,
+          priceSingleCapstone: draft.priceSingleCapstone,
           priceBundle: draft.priceBundle,
           eventConfig: draft.eventConfig,
           fieldOptions: draft.fieldOptions,
@@ -532,6 +533,17 @@ function Panel({ creds, logout }: { creds: string; logout: () => void }) {
               <div className="max-w-md">
                 <Field text="Single track" hint="One track, both of its days.">
                   <RupeeInput paise={draft.priceSingle} onChange={(v) => patch({ priceSingle: v })} />
+                </Field>
+                {/* An add-on, not a SKU: these rows still store sku 'single'. The
+                    form shows the difference from Single track as the checkbox price. */}
+                <Field
+                  text="Single track + capstone day"
+                  hint="One track, both of its days, plus the capstone day."
+                >
+                  <RupeeInput
+                    paise={draft.priceSingleCapstone}
+                    onChange={(v) => patch({ priceSingleCapstone: v })}
+                  />
                 </Field>
                 {/* Bundle is the headline SKU — two tracks plus the capstone day.
                     Tinted rather than boxed-out: enough to catch the eye scanning

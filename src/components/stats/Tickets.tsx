@@ -8,13 +8,15 @@ import type { StatsResponse } from './types';
 const SKU_LABELS: Record<keyof StatsResponse['skus'], string> = {
   capstone: 'Capstone Day only',
   single: 'Single track',
+  singleCapstone: 'Single track + Capstone',
   bundle: 'Bundle',
 };
 
-/** Three products, three fixed colours, so the mix reads the same every visit. */
+/** Four products, four fixed colours, so the mix reads the same every visit. */
 const SKU_COLOURS: Record<keyof StatsResponse['skus'], string> = {
   capstone: SERIES[6],
   single: SERIES[3],
+  singleCapstone: SERIES[1],
   bundle: SERIES[0],
 };
 

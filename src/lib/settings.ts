@@ -26,6 +26,7 @@ export const FALLBACK_SETTINGS: Settings = {
   closedBody: 'Please check back soon.',
   priceCapstone: 10000,
   priceSingle: 25000,
+  priceSingleCapstone: 35000,
   priceBundle: 50000,
   eventConfig: {
     dateRange: '17 - 23 September 2026',

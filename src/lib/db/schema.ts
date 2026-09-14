@@ -320,6 +320,9 @@ export const settings = pgTable('settings', {
   // -- pricing, in paise ------------------------------------------------------
   priceCapstone: integer('price_capstone').notNull().default(10000),  // ₹100
   priceSingle: integer('price_single').notNull().default(25000),      // ₹250
+  // One track with the capstone day added. Not a SKU — `sku` stays 'single' and
+  // `has_capstone` carries it; this is only what that combination costs.
+  priceSingleCapstone: integer('price_single_capstone').notNull().default(35000), // ₹350
   priceBundle: integer('price_bundle').notNull().default(50000),      // ₹500
 
   // -- list-shaped config -----------------------------------------------------

@@ -7,7 +7,8 @@ import type { Sku } from '@/lib/pricing/resolvePrice';
 
 // The track pickers, driven entirely by the chosen SKU:
 //   capstone -> none (the capstone day is not a track)
-//   single   -> one group holding every beginner AND advanced track
+//   single   -> one group holding every beginner AND advanced track, plus an
+//               optional capstone add-on (sku stays 'single'; has_capstone carries it)
 //   bundle   -> two groups, one per segment
 //
 // Cards rather than <select>s, matching the SKU chooser above them: with six
@@ -19,7 +20,7 @@ import type { Sku } from '@/lib/pricing/resolvePrice';
 // Python should be told Python is gone, not left wondering where it went.
 
 /** Must match the slug the tracks table uses for the capstone day. */
-const CAPSTONE_SLUG = 'capstone';
+export const CAPSTONE_SLUG = 'capstone';
 
 export type TrackFieldName = 'singleTrack' | 'beginnerTrack' | 'advancedTrack';
 
@@ -97,18 +98,26 @@ export default function TrackFields({
   singleTrack,
   beginnerTrack,
   advancedTrack,
+  includeCapstone,
   onChange,
+  onToggleCapstone,
+  capstoneAddOnLabel,
 }: {
   sku: Sku | '';
   tracks: TrackOption[];
   singleTrack: string;
   beginnerTrack: string;
   advancedTrack: string;
+  includeCapstone: boolean;
   onChange: (name: TrackFieldName, value: string) => void;
+  onToggleCapstone: (next: boolean) => void;
+  /** e.g. "+₹80". Blank when the combined price is not above the single price. */
+  capstoneAddOnLabel: string;
 }) {
   const beginners = tracks.filter((t) => t.segment === 'beginner');
   const advanced = tracks.filter((t) => t.segment === 'advanced');
   const capstone = tracks.find((t) => t.slug === CAPSTONE_SLUG);
+  const capstoneFull = capstone?.full ?? false;
 
   if (sku === '') return null;
 
@@ -146,6 +155,41 @@ export default function TrackFields({
           value={singleTrack}
           onSelect={(slug) => onChange('singleTrack', slug)}
         />
+
+        {/* Deliberately NOT an OptionCard: that component stretches a radio over
+            the whole card, and a checkbox underneath it would toggle the radio. */}
+        <label
+          className={[
+            'mt-5 flex items-start gap-3 rounded-xl border p-4 transition-colors duration-200',
+            'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent-soft',
+            capstoneFull
+              ? 'cursor-not-allowed border-white/10 bg-white/[0.02]'
+              : includeCapstone
+                ? 'cursor-pointer border-accent bg-accent/10 ring-1 ring-accent'
+                : 'cursor-pointer border-white/20 bg-white/5 hover:border-white/40 hover:bg-white/10',
+          ].join(' ')}
+        >
+          <input
+            id="includeCapstone"
+            name="includeCapstone"
+            type="checkbox"
+            checked={includeCapstone}
+            disabled={capstoneFull}
+            onChange={(e) => onToggleCapstone(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 cursor-[inherit] accent-accent"
+          />
+          <span className="text-sm">
+            <span className={`font-semibold ${capstoneFull ? 'text-gray-500' : 'text-accent-soft'}`}>
+              Add the capstone day
+              {!capstoneFull && capstoneAddOnLabel ? ` ${capstoneAddOnLabel}` : ''}
+            </span>
+            <span className={`mt-0.5 block text-xs ${capstoneFull ? 'text-gray-600' : 'text-gray-400'}`}>
+              {capstoneFull
+                ? 'The capstone day is full.'
+                : `Git & GitHub, building a portfolio, and shipping it${capstone?.dates.length ? ` — ${formatDates(capstone.dates)}` : ''}.`}
+            </span>
+          </span>
+        </label>
       </fieldset>
     );
   }

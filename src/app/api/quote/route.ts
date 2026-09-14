@@ -32,6 +32,8 @@ interface Body {
   sku?: string;
   beginnerTrack?: string | null;
   advancedTrack?: string | null;
+  /** `single` only: add the capstone day. Coerced strictly, as in create-order. */
+  includeCapstone?: boolean;
   couponCode?: string | null;
   /** Optional. Only used to evaluate a per-person redemption limit. */
   email?: string | null;
@@ -71,6 +73,7 @@ export async function POST(request: Request) {
       body.beginnerTrack ?? undefined,
       body.advancedTrack ?? undefined,
       bySlug,
+      body.includeCapstone === true,
     );
     if (typeof selection === 'string') return bad(selection, 'INVALID_SELECTION');
 
@@ -99,8 +102,10 @@ export async function POST(request: Request) {
       prices: {
         capstone: settings.priceCapstone,
         single: settings.priceSingle,
+        singleCapstone: settings.priceSingleCapstone,
         bundle: settings.priceBundle,
       },
+      includeCapstone: selection.capstoneTrack !== null,
       coupon,
       couponUses: usage.total,
       couponUsesByPerson: usage.byPerson,

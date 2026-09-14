@@ -27,13 +27,16 @@ import {
 const PRICES: Prices = {
   capstone: 10000,
   single: 25000,
+  singleCapstone: 35000,
   bundle: 50000,
 };
 
-/** A price list the admin has edited, used to prove base prices are not constants. */
+/** A price list the admin has edited, used to prove base prices are not constants.
+ *  `singleCapstone` is deliberately not the sum of its parts — it is set on its own. */
 const CUSTOM_PRICES: Prices = {
   capstone: 4990,
   single: 19900,
+  singleCapstone: 23900,
   bundle: 34990,
 };
 
@@ -97,9 +100,51 @@ describe('resolvePrice — base price per SKU', () => {
     });
   });
 
+  it('charges the combined price for a single track with the capstone added', () => {
+    expectResult(resolvePrice({ sku: 'single', prices: PRICES, includeCapstone: true, now: NOW }), {
+      base: 35000,
+      discount: 0,
+      amount: 35000,
+      couponApplied: false,
+      rejection: null,
+    });
+  });
+
+  it('charges the plain single price when the capstone is absent or declined', () => {
+    expect(resolvePrice({ sku: 'single', prices: PRICES, now: NOW }).amount).toBe(25000);
+    expect(
+      resolvePrice({ sku: 'single', prices: PRICES, includeCapstone: false, now: NOW }).amount,
+    ).toBe(25000);
+  });
+
+  it('ignores the capstone flag for the two SKUs that already settle it', () => {
+    expect(
+      resolvePrice({ sku: 'capstone', prices: PRICES, includeCapstone: true, now: NOW }).amount,
+    ).toBe(10000);
+    expect(
+      resolvePrice({ sku: 'bundle', prices: PRICES, includeCapstone: true, now: NOW }).amount,
+    ).toBe(50000);
+  });
+
+  it('discounts the combined base, not the plain single price', () => {
+    expectResult(
+      resolvePrice({
+        sku: 'single',
+        prices: PRICES,
+        includeCapstone: true,
+        coupon: coupon({ type: 'percent', value: 20 }),
+        now: NOW,
+      }),
+      { base: 35000, discount: 7000, amount: 28000, couponApplied: true, rejection: null },
+    );
+  });
+
   it('reads the base price from the settings it is handed, not from a constant', () => {
     expect(resolvePrice({ sku: 'capstone', prices: CUSTOM_PRICES, now: NOW }).amount).toBe(4990);
     expect(resolvePrice({ sku: 'single', prices: CUSTOM_PRICES, now: NOW }).amount).toBe(19900);
+    expect(
+      resolvePrice({ sku: 'single', prices: CUSTOM_PRICES, includeCapstone: true, now: NOW }).amount,
+    ).toBe(23900);
     expect(resolvePrice({ sku: 'bundle', prices: CUSTOM_PRICES, now: NOW }).amount).toBe(34990);
   });
 

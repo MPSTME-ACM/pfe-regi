@@ -7,7 +7,7 @@ import PolicyLinks from './PolicyLinks';
 import ProgramHeader from './ProgramHeader';
 import { InputField, SelectField, type SelectOption } from './FormFields';
 import SkuChooser, { SKUS } from './SkuChooser';
-import TrackFields, { type TrackFieldName } from './TrackFields';
+import TrackFields, { CAPSTONE_SLUG, type TrackFieldName } from './TrackFields';
 import { type TrackOption } from './registrationTypes';
 import type { EventConfig, FieldOptions, FieldLabels } from '@/lib/db/schema';
 import CouponField, { formatPaiseClient, type AppliedCoupon } from './CouponField';
@@ -63,11 +63,13 @@ interface Draft {
   singleTrack: string;
   beginnerTrack: string;
   advancedTrack: string;
+  /** `single` only: the capstone day added on. Not a SKU — see TrackFields. */
+  includeCapstone: boolean;
 }
 
 const EMPTY_DRAFT: Draft = {
   name: '', email: '', contact: '', college: '', collegeOther: '', course: '', department: '', year: '',
-  referral: '', sku: '', singleTrack: '', beginnerTrack: '', advancedTrack: '',
+  referral: '', sku: '', singleTrack: '', beginnerTrack: '', advancedTrack: '', includeCapstone: false,
 };
 
 const DRAFT_KEY = 'pfe-form-data';
@@ -132,6 +134,11 @@ function restoreDraft(raw: string, tracks: TrackOption[]): Draft | null {
     singleTrack: slug('singleTrack'),
     beginnerTrack: slug('beginnerTrack'),
     advancedTrack: slug('advancedTrack'),
+    // Dropped if the capstone filled up since the draft was saved, mirroring the
+    // way `slug()` drops a track that is now full.
+    includeCapstone:
+      record.includeCapstone === true &&
+      tracks.find((t) => t.slug === CAPSTONE_SLUG)?.full !== true,
   };
 }
 
@@ -145,6 +152,8 @@ export default function RegistrationForm({
   referredBy,
   tracks: initialTracks,
   priceLabels,
+  singleCapstoneLabel,
+  capstoneAddOnLabel,
   cashfreeMode,
   merchantName,
   merchantEmail,
@@ -160,6 +169,10 @@ export default function RegistrationForm({
   tracks: TrackOption[];
   /** Display only. The server computes and stores the real amount. */
   priceLabels: Record<Sku, string>;
+  /** One track with the capstone day, e.g. "₹350". Not a SKU, so not in priceLabels. */
+  singleCapstoneLabel: string;
+  /** What the checkbox advertises, e.g. "+₹80". Blank when there is no uplift. */
+  capstoneAddOnLabel: string;
   /** Driven by CASHFREE_ENV on the server. Was hardcoded to "production", which
    *  made it impossible to test a real checkout against the sandbox. */
   cashfreeMode: 'sandbox' | 'production';
@@ -248,12 +261,24 @@ export default function RegistrationForm({
         const track = tracks.find((t) => t.slug === slug);
         return Boolean(track && !track.full);
       };
-      if (ok(prev.singleTrack) && ok(prev.beginnerTrack) && ok(prev.advancedTrack)) return prev;
+      // The capstone can fill up mid-session too, and it is bought by a flag
+      // rather than a slug, so it needs its own check.
+      const keepCapstone =
+        prev.includeCapstone && tracks.find((t) => t.slug === CAPSTONE_SLUG)?.full !== true;
+      if (
+        ok(prev.singleTrack) &&
+        ok(prev.beginnerTrack) &&
+        ok(prev.advancedTrack) &&
+        keepCapstone === prev.includeCapstone
+      ) {
+        return prev;
+      }
       return {
         ...prev,
         singleTrack: ok(prev.singleTrack) ? prev.singleTrack : '',
         beginnerTrack: ok(prev.beginnerTrack) ? prev.beginnerTrack : '',
         advancedTrack: ok(prev.advancedTrack) ? prev.advancedTrack : '',
+        includeCapstone: keepCapstone,
       };
     });
   }, [tracks]);
@@ -286,13 +311,27 @@ export default function RegistrationForm({
   const handleSkuChange = (sku: Sku) => {
     setSubmitError('');
     setAppliedCoupon(null);
-    setFormData((prev) => ({ ...prev, sku }));
+    // The add-on belongs to `single` alone, so a tick left behind must not ride
+    // along into a bundle or capstone order.
+    setFormData((prev) => ({
+      ...prev,
+      sku,
+      includeCapstone: sku === 'single' && prev.includeCapstone,
+    }));
   };
 
   const handleTrackChange = (name: TrackFieldName, value: string) => {
     setSubmitError('');
     setAppliedCoupon(null);
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Drops the applied coupon for the same reason a track change does: this moves
+  // the base price, so a quote taken against the old one no longer holds.
+  const handleCapstoneToggle = (next: boolean) => {
+    setSubmitError('');
+    setAppliedCoupon(null);
+    setFormData((prev) => ({ ...prev, includeCapstone: next }));
   };
 
   /**
@@ -303,14 +342,16 @@ export default function RegistrationForm({
    * which key — the routing rule that "a single beginner track is sent as
    * beginnerTrack" lives in exactly one place.
    */
-  const buildQuoteBody = (): Record<string, string> | null => {
+  const buildQuoteBody = (): Record<string, string | boolean> | null => {
     const payload = buildPayload();
     if (typeof payload === 'string') return null;
-    const { sku, beginnerTrack, advancedTrack, email, contact } = payload;
+    const { sku, beginnerTrack, advancedTrack, includeCapstone, email, contact } = payload;
     return {
       sku,
       ...(beginnerTrack ? { beginnerTrack } : {}),
       ...(advancedTrack ? { advancedTrack } : {}),
+      // Sent so the quote prices the same thing checkout will charge for.
+      ...(includeCapstone ? { includeCapstone: true } : {}),
       // Sent so a per-person redemption cap is evaluated against the right
       // person. Blank while the fields are empty, which reads as "nobody" and
       // simply quotes the optimistic case; checkout enforces it either way.
@@ -325,10 +366,10 @@ export default function RegistrationForm({
    * Returns a message instead of a body when the selection is incomplete, so the
    * user gets told here rather than by a 400.
    */
-  const buildPayload = (): Record<string, string> | string => {
+  const buildPayload = (): Record<string, string | boolean> | string => {
     if (!formData.sku) return 'Choose what you want to register for.';
 
-    const payload: Record<string, string> = {
+    const payload: Record<string, string | boolean> = {
       name: formData.name.trim(),
       email: formData.email.trim(),
       contact: formData.contact.trim(),
@@ -358,6 +399,16 @@ export default function RegistrationForm({
       // is rejected as "a single track means one track, not two".
       if (track.segment === 'beginner') payload.beginnerTrack = track.slug;
       else payload.advancedTrack = track.slug;
+
+      // Sent as a real boolean, not 'true'/'false': the string 'false' is truthy,
+      // which is a quiet way to bill someone for a day they did not ask for.
+      if (formData.includeCapstone) {
+        const capstone = tracks.find((t) => t.slug === CAPSTONE_SLUG);
+        if (capstone?.full) {
+          return 'The capstone day is full. Uncheck it to continue with just the track.';
+        }
+        payload.includeCapstone = true;
+      }
     }
 
     if (formData.sku === 'bundle') {
@@ -510,7 +561,10 @@ export default function RegistrationForm({
                   singleTrack={formData.singleTrack}
                   beginnerTrack={formData.beginnerTrack}
                   advancedTrack={formData.advancedTrack}
+                  includeCapstone={formData.includeCapstone}
                   onChange={handleTrackChange}
+                  onToggleCapstone={handleCapstoneToggle}
+                  capstoneAddOnLabel={capstoneAddOnLabel}
                 />
 
                 <InputField label={fieldLabels.name.label} type="text" placeholder={fieldLabels.name.placeholder} name="name" value={formData.name} onChange={handleInputChange} required />
@@ -583,7 +637,12 @@ export default function RegistrationForm({
                         <span className="text-accent-soft">{formatPaiseClient(appliedCoupon.amount)}</span>
                       </>
                     ) : (
-                      <>Ticket Price: {priceLabels[formData.sku]}</>
+                      <>
+                        Ticket Price:{' '}
+                        {formData.sku === 'single' && formData.includeCapstone
+                          ? singleCapstoneLabel
+                          : priceLabels[formData.sku]}
+                      </>
                     )}
                   </p>
                   {appliedCoupon?.amount === 0 && (

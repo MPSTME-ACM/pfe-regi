@@ -155,7 +155,7 @@ function buildPatch(body: unknown): { patch: SettingsPatch } | { errors: string[
       else patch[field] = o[field] as string;
     }
   }
-  for (const field of ['priceCapstone', 'priceSingle', 'priceBundle'] as const) {
+  for (const field of ['priceCapstone', 'priceSingle', 'priceSingleCapstone', 'priceBundle'] as const) {
     const parsed = parsePrice(o[field], field, errors);
     if (parsed !== undefined) patch[field] = parsed;
   }

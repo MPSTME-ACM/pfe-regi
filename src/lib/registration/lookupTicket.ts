@@ -41,6 +41,8 @@ export interface TicketView {
   /** What they bought: resolved track names, or the 2025 `domain`. */
   description: string;
   sku: string | null;
+  /** `single` alone does not say whether the capstone day was added on. */
+  hasCapstone: boolean;
   paymentStatus: string | null;
   qrCodeUrl: string | null;
   /** Exactly the days this registration may be marked present for, in order. */
@@ -154,6 +156,7 @@ async function lookup2026(orderId: string): Promise<TicketLookup | null> {
       department: row.department,
       description: describe(sel, row.sku),
       sku: row.sku,
+      hasCapstone: row.hasCapstone,
       paymentStatus: row.paymentStatus,
       qrCodeUrl: row.qrCodeUrl,
       days: daysForRegistration(row, sel),
@@ -195,6 +198,7 @@ async function lookup2025(orderId: string): Promise<TicketLookup | null> {
       department: row.department,
       description: row.domain || '2025 registration',
       sku: null,
+      hasCapstone: false,
       paymentStatus: row.paymentStatus,
       qrCodeUrl: row.qrCodeUrl,
       days,

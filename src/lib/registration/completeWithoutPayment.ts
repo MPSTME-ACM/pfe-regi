@@ -93,6 +93,7 @@ export async function sendTicketEmail(orderId: string, qrCodeUrl: string): Promi
       name: row.name,
       orderId,
       sku: row.sku,
+      hasCapstone: row.hasCapstone,
       items,
       qrUrl: qrCodeUrl,
       event: settings.eventConfig,

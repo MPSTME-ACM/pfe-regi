@@ -50,7 +50,7 @@ export default function CouponField({
   applied: AppliedCoupon | null;
   onApplied: (a: AppliedCoupon) => void;
   onCleared: () => void;
-  buildQuoteBody: () => Record<string, string> | null;
+  buildQuoteBody: () => Record<string, string | boolean> | null;
 }) {
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
 

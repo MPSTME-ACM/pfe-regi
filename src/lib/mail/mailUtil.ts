@@ -54,6 +54,8 @@ export interface TicketMail {
   name: string;
   orderId: string;
   sku: Sku;
+  /** `single` alone does not say whether the capstone day was added on. */
+  hasCapstone: boolean;
   /** What the SKU actually bought, in programme order. May be empty. */
   items: TicketItem[];
   /** data:image/png;base64 QR. Attached as cid:qr-code, never inlined. */
@@ -68,6 +70,12 @@ export const SKU_LABELS: Record<Sku, string> = {
   single: 'Single Track',
   bundle: 'Full Bundle',
 };
+
+/** The SKU is not the whole story: a single track may carry the capstone day. */
+export function skuLabelFor(sku: Sku, hasCapstone: boolean): string {
+  if (sku === 'single' && hasCapstone) return 'One Track + Capstone Day';
+  return SKU_LABELS[sku] ?? sku;
+}
 
 const SEGMENT_LABELS: Record<TicketItem['segment'], string> = {
   beginner: 'Beginner',
@@ -131,7 +139,7 @@ function scheduleLines(items: TicketItem[]): string[] {
 }
 
 export async function sendMail(input: TicketMail) {
-  const { to, sku, items, event, orderId, qrUrl } = input;
+  const { to, sku, hasCapstone, items, event, orderId, qrUrl } = input;
 
   if (!canSendEmail(to)) {
     return;
@@ -155,7 +163,7 @@ export async function sendMail(input: TicketMail) {
   // renaming it there produces "undefined" in a real email that nobody sees
   // until a student forwards it.
   const { dateRange, timeRange, venue, contactEmail, whatsappUrl } = event;
-  const skuLabel = SKU_LABELS[sku] ?? sku;
+  const skuLabel = skuLabelFor(sku, hasCapstone);
   const name = esc(input.name);
 
   const lines = scheduleLines(items);

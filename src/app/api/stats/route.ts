@@ -85,11 +85,17 @@ export async function GET(request: Request) {
         .from(registrations)
         .groupBy(registrations.paymentStatus),
 
+      // Grouped by the capstone flag too: a single track with the capstone added
+      // is a different product at a different price, and `sku` alone hides that.
       db
-        .select({ sku: registrations.sku, n: count(registrations.id) })
+        .select({
+          sku: registrations.sku,
+          capstone: registrations.hasCapstone,
+          n: count(registrations.id),
+        })
         .from(registrations)
         .where(OCCUPYING)
-        .groupBy(registrations.sku),
+        .groupBy(registrations.sku, registrations.hasCapstone),
 
       // Track ids, resolved to names in JS against the rows already fetched —
       // cheaper than two more joins for a table with seven rows in it.
@@ -199,8 +205,12 @@ export async function GET(request: Request) {
     // person, so summing `domains` would triple-count them.
     const occupying = statuses.success + statuses.comped;
 
-    const skus = { capstone: 0, single: 0, bundle: 0 };
-    for (const row of skuRows) skus[row.sku as keyof typeof skus] = Number(row.n);
+    const skus = { capstone: 0, single: 0, singleCapstone: 0, bundle: 0 };
+    for (const row of skuRows) {
+      const key =
+        row.sku === 'single' && row.capstone ? 'singleCapstone' : (row.sku as keyof typeof skus);
+      skus[key] += Number(row.n);
+    }
 
     const combos: ComboRow[] = comboRows.map((r) => ({
       beginner: r.beginnerId ? (trackName.get(r.beginnerId) ?? null) : null,
