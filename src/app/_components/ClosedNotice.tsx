@@ -8,8 +8,8 @@ import type { EventConfig } from '@/lib/db/schema';
 // page.save.tsx and committing.
 
 const CONTACTS = [
-  { name: 'Rutvi Mandowara', phone: '8000106729' },
-  { name: 'Kartik Jain', phone: '8169133253' },
+  { name: 'Divya Sharma', phone: '8827932897' },
+  { name: 'Satviki Pandey', phone: '9452293015' },
 ];
 
 export default function ClosedNotice({
