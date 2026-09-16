@@ -18,7 +18,7 @@ import Image from 'next/image';
 
 const STORAGE_KEY = 'admin-creds';
 
-export type AdminRole = 'admin' | 'member';
+export type AdminRole = 'admin' | 'member' | 'staff';
 
 /** Read the stored credential outside a React tree (e.g. in an event handler). */
 export function getStoredCreds(): string | null {
@@ -82,7 +82,7 @@ function LoginForm({
           priority
         />
         <p className="mt-3 text-[13px] tracking-wide text-gray-500">
-          {role === 'admin' ? 'Organiser access' : 'ACM member access'}
+          {role === 'admin' ? 'Organiser access' : role === 'member' ? 'ACM member access' : 'Door staff access'}
         </p>
       </div>
 
@@ -91,7 +91,9 @@ function LoginForm({
         <p className="mt-1 mb-6 text-sm text-gray-400">
           {role === 'admin'
             ? 'Sign in to manage registration, pricing and tracks.'
-            : 'Sign in to register ACM members.'}
+            : role === 'member'
+              ? 'Sign in to register ACM members.'
+              : 'Sign in with the admin or volunteer account to scan tickets.'}
         </p>
 
         <form onSubmit={handleSubmit} noValidate>
@@ -185,22 +187,60 @@ export default function AdminGate({
   const [error, setError] = useState('');
 
   useEffect(() => {
-    setCreds(getStoredCreds());
+    const stored = getStoredCreds();
+    if (!stored) {
+      setReady(true);
+      return;
+    }
+    if (role === 'admin') {
+      // The storage key is shared across every staff route, and /verify now
+      // also accepts the member password — so stored creds can belong to a
+      // volunteer, not an admin. Trusting them here renders /admin as a screen
+      // of 401s. Verify silently against the admin endpoint instead; a network
+      // error keeps the credential, so this check can never lock a working
+      // admin out of an already-open panel.
+      fetch('/api/login', { headers: { Authorization: stored } })
+        .then((res) => {
+          if (res.ok) {
+            setCreds(stored);
+          } else {
+            clearStoredCreds();
+          }
+        })
+        .catch(() => {
+          setCreds(stored);
+        })
+        .finally(() => setReady(true));
+      return;
+    }
+    // Member and staff routes trust the stored credential directly: /verify
+    // has to come back up with no network at all after a reload.
+    setCreds(stored);
     setReady(true);
-  }, []);
+  }, [role]);
 
   const handleLogin = async (user: string, pass: string) => {
     const next = `Basic ${btoa(`${user}:${pass}`)}`;
-    const endpoint = role === 'admin' ? '/api/login' : '/api/member-login';
+    // Staff screens accept either credential: the same Basic string is valid
+    // against both endpoints, so try each in turn. Admin first — a mistyped
+    // admin password must not accidentally succeed as a member login.
+    const endpoints =
+      role === 'admin'
+        ? ['/api/login']
+        : role === 'member'
+          ? ['/api/member-login']
+          : ['/api/login', '/api/member-login'];
     try {
-      const res = await fetch(endpoint, { headers: { Authorization: next } });
-      if (!res.ok) {
-        setError('Invalid username or password');
-        return;
+      for (const endpoint of endpoints) {
+        const res = await fetch(endpoint, { headers: { Authorization: next } });
+        if (res.ok) {
+          setError('');
+          sessionStorage.setItem(STORAGE_KEY, next);
+          setCreds(next);
+          return;
+        }
       }
-      setError('');
-      sessionStorage.setItem(STORAGE_KEY, next);
-      setCreds(next);
+      setError('Invalid username or password');
     } catch {
       setError('Network error during authentication');
     }

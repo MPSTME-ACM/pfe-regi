@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { registrations } from '@/lib/db/schema';
 import { eq, sql } from 'drizzle-orm';
-import { requireAdmin } from '@/lib/auth/requireAdmin';
+import { requireStaff } from '@/lib/auth/requireAdmin';
 import { lookupTicket } from '@/lib/registration/lookupTicket';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -20,8 +20,13 @@ import { lookupTicket } from '@/lib/registration/lookupTicket';
 
 export async function POST(request: Request) {
   try {
-    const auth = requireAdmin(request);
-    if (!auth.ok) return auth.response;
+    // Staff, not admin-only: volunteers scan on the member credential, and the
+    // committee does not hand the admin password to every attendance taker.
+    const auth = requireStaff(request);
+    if (!auth.ok) {
+      console.warn('verify auth rejected', request.headers.get('user-agent') ?? 'no-ua');
+      return auth.response;
+    }
 
     const { orderId, attendance } = await request.json();
 

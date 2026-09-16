@@ -121,6 +121,24 @@ export function requireMember(request: Request): AuthResult {
 }
 
 /**
+ * Validate STAFF authentication: admin OR member.
+ *
+ * Door tooling (/verify, roster, batch attendance) runs on volunteers' phones,
+ * and the committee does not hand the admin password to every attendance
+ * taker. Either credential opens these routes; nothing here distinguishes what
+ * an admin can do from what a member can do, so keep staff routes to
+ * read-ticket + mark-attendance only.
+ */
+export function requireStaff(request: Request): AuthResult {
+  const admin = requireAdmin(request);
+  if (admin.ok) return admin;
+  const member = requireMember(request);
+  if (member.ok) return member;
+  // Either credential would have passed; surface the admin rejection.
+  return admin;
+}
+
+/**
  * `Authorization: Bearer <CRON_SECRET>`, for machine triggers.
  *
  * A cron holding the shared ADMIN_PASSWORD breaks silently the moment that
