@@ -488,7 +488,11 @@ const TicketPanel = ({
       setOfflineMiss(!wasOnline)
       setError(wasOnline ? "Ticket not found." : "You are offline and this ticket is not in the downloaded roster.")
     }
-    void run()
+    // The spinner clears when the lookup settles — success, cache hit, or miss.
+    // Forgetting this once meant a permanent "Looking up ticket…" spinner.
+    run().finally(() => {
+      if (!cancelled) setLoading(false)
+    })
     return () => {
       cancelled = true
     }
@@ -744,6 +748,7 @@ const VerifyScreen = ({ creds, logout }: { creds: string; logout: () => void }) 
   const [orderId, setOrderId] = useState<string | null>(null)
   const [scanning, setScanning] = useState(false)
   const [scanError, setScanError] = useState("")
+  const [manualId, setManualId] = useState("")
 
   const [roster, setRoster] = useState<CachedRoster | null>(null)
   const [outbox, setOutbox] = useState<OutboxEntry[]>([])
@@ -1110,6 +1115,47 @@ const VerifyScreen = ({ creds, logout }: { creds: string; logout: () => void }) 
             >
               Start scanning
             </button>
+
+            {/* Camera-dead or cracked-QR fallback: the same orderId parser the
+                scanner uses, so a pasted ticket URL works too. */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                const id = orderIdFromScan(manualId.trim())
+                if (!id) {
+                  setScanError("That does not look like a PFE Order ID.")
+                  return
+                }
+                setScanError("")
+                setManualId("")
+                openTicket(id)
+              }}
+              className="space-y-2"
+            >
+              <label htmlFor="manual-order" className="block text-xs font-medium uppercase tracking-[0.16em] text-gray-400">
+                Or enter the Order ID
+              </label>
+              <div className="flex gap-2">
+                <input
+                  id="manual-order"
+                  type="text"
+                  value={manualId}
+                  onChange={(e) => setManualId(e.target.value)}
+                  placeholder="PFE-XXXXXXXXXX"
+                  autoComplete="off"
+                  autoCapitalize="characters"
+                  spellCheck={false}
+                  className="min-w-0 flex-1 bg-white/5 border border-hairline rounded-xl px-4 text-base font-mono tracking-wide text-white placeholder-gray-600 outline-none transition-[border-color,box-shadow] hover:border-hairline/80 focus:border-accent/60 focus:ring-2 focus:ring-accent/25"
+                />
+                <button
+                  type="submit"
+                  disabled={manualId.trim().length === 0}
+                  className="shrink-0 min-h-14 px-5 rounded-xl border border-white/20 bg-white/5 text-lg font-semibold text-white transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-soft disabled:opacity-40"
+                >
+                  Open
+                </button>
+              </div>
+            </form>
             <button onClick={clearCachedData} disabled={pending > 0} className={SECONDARY}>
               {pending > 0 ? `Clear cached data (${pending} pending)` : "Clear cached data"}
             </button>
